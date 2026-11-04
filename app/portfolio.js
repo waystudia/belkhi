@@ -71,7 +71,15 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
   }
   for(const photoButton of document.querySelectorAll('.review-photo'))photoButton.onclick=()=>{
     const dialog=document.querySelector('#confirmation');
-    dialog.innerHTML='<h3>Фото из демоотзыва</h3><img class="full-work" src="'+photoButton.querySelector('img').src+'" alt="Фото работы"><button data-cancel>Закрыть</button>';
+    const card=photoButton.closest('.review-card');
+    const author=card?.querySelector('.review-card-head img');
+    const authorName=card?.querySelector('.review-card-head strong')?.textContent||'Заказчик';
+    const authorMeta=card?.querySelector('.review-card-head small')?.textContent||'Подтверждённый заказ';
+    const review=card?.querySelector(':scope > p')?.textContent||'Фото выполненной работы';
+    const title=photoButton.querySelector('strong')?.textContent||photoButton.querySelector('img').alt||'Выполненная работа';
+    dialog.innerHTML=`<article class="work-post review-detail"><div class="work-author"><span>${author?'<img src="'+author.src+'" alt="'+esc(authorName)+'">':esc(authorName.slice(0,1))}</span><div><strong>${esc(authorName)}</strong><small>${esc(authorMeta)}</small></div><button data-cancel aria-label="Закрыть публикацию">×</button></div>
+      <img class="post-image" src="${photoButton.querySelector('img').src}" alt="${esc(title)}">
+      <div class="review-detail-copy"><div class="review-detail-label"><span class="review-stars" aria-label="Оценка 5 из 5">★★★★★</span><small>Подтверждённый отзыв</small></div><h3>${esc(title)}</h3><p>${esc(review)}</p></div></article>`;
     dialog.showModal();
   };
   const switches=document.querySelectorAll('.profile-sections button');

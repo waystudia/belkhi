@@ -1,4 +1,4 @@
-import {portfolio} from './portfolio.js';
+import {portfolio} from './portfolio.js?v=20261104-1';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';

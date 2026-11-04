@@ -337,6 +337,13 @@ textarea{min-height:60px}
 .review-preview strong,.review-preview small{display:block}
 .review-preview strong{font-size:11px}.review-preview small{font-size:9px}
 @media(max-width:380px){.settings-pair{grid-template-columns:1fr}.review-stars{font-size:11px}}
+.review-detail-copy{padding:2px 2px 10px}
+.review-detail-copy h3{margin-top:4px}
+.review-detail-copy p{margin-top:4px;line-height:1.45}
+.review-detail-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 12px 0}
+.review-detail-label small{font-size:10px;color:var(--muted)}
+dialog:has(.review-detail){width:min(520px,calc(100vw - 24px));max-width:520px}
+@media(max-width:520px){dialog:has(.review-detail){width:calc(100vw - 16px);max-height:90dvh}.review-detail .post-image{max-height:58dvh}}
 
 /* Responsive floating navigation */
 :root{--ease-out:cubic-bezier(.23,1,.32,1);--ease-in-out:cubic-bezier(.77,0,.175,1)}
