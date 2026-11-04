@@ -53,14 +53,23 @@ function notice(msg){document.querySelector('#message').textContent=msg}
 function objectURL(file){const url=URL.createObjectURL(file);urls.push(url);return url}
 const workerPages=['worker','market','works','crew','apply','sent','crm','manual','buyer'];
 const navIcons={
-  market:'M2 7h20v13H2z M8 7V4h8v3', works:'M3 5h7l2 3h9v12H3z',
-  crew:'M3 20v-2a5 5 0 0 1 10 0v2 M18 14a4 4 0 0 1 4 4v2 M12 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M16 4a4 4 0 0 1 0 8',
-  worker:'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21a8 8 0 0 1 16 0'
+  market:'M5 3h10l4 4v14H5z M15 3v5h4 M9 12h6 M9 16h4',
+  works:'M3 7h7l2 3h9v10H3z M3 7V5h7l2 2',
+  crew:'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M3 21v-2a6 6 0 0 1 12 0v2 M17 6a3 3 0 0 1 0 6 M17 15a5 5 0 0 1 5 5v1',
+  worker:'M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 21a7 7 0 0 1 14 0'
 };
 function bottomNav(worker,page){
   const items=worker?[['market','Тендеры','market'],['works','Работы','works'],['crew','Команда','crew'],['worker','Профиль','worker']]:[['list','Мои объекты','works'],['customer','Профиль','worker']];
   const active=({crm:'works',manual:'works',apply:'market',sent:'works',new:'list',offers:'list',profile:'list',project:'list'})[page]||page;
-  document.querySelector('#bottom-nav').innerHTML=items.map(([path,title,icon])=>'<a href="#'+path+'" aria-label="'+title+'" title="'+title+'" '+(active===path?'aria-current="page"':'')+'><svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+navIcons[icon]+'"/></svg></a>').join('');
+  const nav=document.querySelector('#bottom-nav'),signature=items.map(item=>item[0]).join('|');
+  if(nav.dataset.items!==signature){
+    nav.dataset.items=signature;
+    nav.innerHTML=items.map(([path,title,icon])=>'<a href="#'+path+'" aria-label="'+title+'" title="'+title+'"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+navIcons[icon]+'"/></svg></a>').join('');
+  }
+  for(const item of nav.querySelectorAll('a')){
+    const selected=item.getAttribute('href')==='#'+active;
+    if(selected)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');
+  }
 }
 function teamMembers(p){return JSON.parse(localStorage.getItem('belkhi-team-'+p.id)||'[]')}
 function crewScreen(p){
