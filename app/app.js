@@ -232,7 +232,7 @@ function tenderRow(t, target, status, ownerVisible=false){
 }
 function market(tenders,p,params){
   const filter=params.get('tab')||(p.skills.length?'По специальности':'Все');
-  const relevant=tenders.filter(t=>filter==='Мои отклики'?myBid(t,p):t.winner==null&&t.parentOwner!==p.id&&(filter==='Все'||p.skills.includes(t.kind))).sort((a,b)=>b.created-a.created);
+  const relevant=tenders.filter(t=>!t.manual&&(filter==='Мои отклики'?myBid(t,p):t.winner==null&&(t.demo||t.owner)&&t.parentOwner!==p.id&&(filter==='Все'||p.skills.includes(t.kind)))).sort((a,b)=>b.created-a.created);
   const choices=key=>[...new Set(relevant.map(t=>t[key]).filter(Boolean))].sort();
   const filters=`<form id="feed-filter">
     <input type="search" name="query" id="tender-search" aria-label="Поиск объектов" placeholder="Поиск по объектам">
@@ -332,7 +332,7 @@ async function workerScreen(page,id,params,seq){
   const t=await records('readonly',s=>s.get(id));if(seq!==generation)return;
   if(!t){location.replace('#market');return}
   current=t;
-  if(page==='apply'&&t.parentOwner===p.id){location.replace('#offers/'+t.id);return}
+  if(page==='apply'&&(t.parentOwner===p.id||(!t.demo&&!t.manual&&!t.owner&&!t.parentId))){location.replace('#offers/'+t.id);return}
   if(page==='buyer'){location.replace('#works');return}
   if(page==='crm'){if(t.winner!==p.id){location.replace('#works');return}crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel});
     const children=(await records('readonly',s=>s.getAll())).filter(child=>child.parentId===t.id);
