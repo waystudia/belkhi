@@ -345,6 +345,18 @@ textarea{min-height:60px}
 dialog:has(.review-detail){width:min(520px,calc(100vw - 24px));max-width:520px}
 @media(max-width:520px){dialog:has(.review-detail){width:calc(100vw - 16px);max-height:90dvh}.review-detail .post-image{max-height:58dvh}}
 
+.crm-cover{display:block;width:100%;height:180px;object-fit:cover;border-radius:12px}
+.crm-project-cover:empty{display:none}
+.crm-project-cover{margin-bottom:10px}
+.crm-task-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.crm-task-title .tag{font-size:10px;font-weight:500;flex:none}
+.crm-plan>.fold{border:1px solid var(--line);border-radius:12px;margin:8px 0;padding:0 10px}
+.crm-plan .fold .fold{padding-left:0}
+.crm-plan form{display:grid;gap:6px}
+.crm-plan form label{margin:0;font-size:12px}
+.crm-plan form button{justify-self:start;min-height:36px}
+.crm-plan fieldset{margin:0}
+.crm-complete{color:var(--green);font-size:12px}
 /* Responsive floating navigation */
 :root{--ease-out:cubic-bezier(.23,1,.32,1);--ease-in-out:cubic-bezier(.77,0,.175,1)}
 body{padding-bottom:92px}

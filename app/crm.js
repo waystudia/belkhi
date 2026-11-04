@@ -12,8 +12,9 @@ export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel
   function taskView(task){
     const assignee=members.find(m=>m.id===task.assignee)?.name||p.name;
     const status=task.done?'Готово':task.type==='Количество'?task.count+' / '+task.target+' '+esc(task.unit):'В работе';
-    const report=task.type==='Количество'?field('Добавить за смену','amount','type="number" min="1" max="'+(task.target-task.count)+'"'):task.type==='Текст'?field('Что выполнено','note','maxlength="1000"'):'';
-    return section(esc(task.name)+'<small>'+esc(assignee)+(task.due?' · до '+esc(task.due):'')+' · '+status+'</small>',task.done?'Задача выполнена.':'<form data-task="'+task.id+'">'+report+'<label>Фотоотчёт <input type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label><button class="secondary">'+(task.type==='Количество'?'Записать объём':'Завершить задачу')+'</button></form>');
+    const report=task.type==='Количество'?field('Добавить за смену · '+esc(task.unit),'amount','type="number" min="1" max="'+(task.target-task.count)+'"'):task.type==='Текст'?field('Что выполнено','note','maxlength="1000"'):'';
+    const meter=task.type==='Количество'?'<progress aria-label="Объём выполненных работ" max="'+task.target+'" value="'+task.count+'"></progress>':'';
+    return section('<span class="crm-task-title">'+esc(task.name)+'<span class="tag">'+esc(task.type)+'</span></span><small>'+esc(assignee)+(task.due?' · до '+esc(task.due):'')+' · '+status+'</small>',meter+(task.done?'<p class="crm-complete">Задача выполнена</p>':'<form data-task="'+task.id+'">'+report+'<label>Фотоотчёт '+(task.type==='Фото'?'· обязательно':'· по желанию')+'<input '+(task.type==='Фото'?'required':'')+' type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label><button class="secondary">'+(task.type==='Количество'?'Записать объём':'Завершить задачу')+'</button></form>'));
   }
   function stageView(s){
     const add='<form data-stage="'+s.id+'">'+field('Название задачи','name','maxlength="120"')+'<label>Ответственный<select name="assignee">'+assignees+'</select></label><label>Выполнить до<input name="due" type="date"></label><label>Форма отчёта<select name="type"><option>Галочка</option><option>Количество</option><option>Текст</option></select></label><fieldset hidden disabled>'+field('Плановый объём','target','type="number" min="1" max="1000000000"')+field('Единица измерения','unit','maxlength="24" placeholder="кирпичи, м²…"')+'</fieldset><button class="secondary">Создать задачу</button></form>';
@@ -30,8 +31,12 @@ export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel
     <div class="crm-next"><small>${stage||!plan.length?'Следующий шаг':'План выполнен'}</small><strong>${nextHint}</strong>${nextForm?'<button class="secondary" id="crm-next">'+nextLabel+'</button>':''}</div>`;
   const addStage=section('Добавить этап','<form id="crm-stage">'+field('Название этапа','name','maxlength="120" placeholder="Например, фундамент"')+'<label>Завершить до<input name="due" type="date"></label><button class="primary">Сохранить этап</button></form>');
   const journal=section('Журнал объекта <small>Записей: '+log.length+'</small>',log.slice().reverse().map(e=>'<p><small>'+esc(new Date(e.at).toLocaleString('ru'))+'</small><br>'+esc(e.text)+(e.photo?'<br><a href="'+e.photo+'" download="Отчёт">Скачать фото</a>':'')+'</p>').join('')||'Здесь появятся изменения плана и отчёты по задачам.');
-  show(null,t.kind,summary+'<h3>План работ</h3>'+plan.map(stageView).join('')+addStage+journal+link('crew','Управление командой','back'),'works');
+  const cover=t.photo?'<img class="crm-cover" src="media/'+encodeURIComponent(t.photo)+'.jpg" alt="'+esc(t.kind)+'">':'';
+  const files=(t.files||[]).map((f,i)=>'<a class="project" data-project-file="'+i+'">'+esc(f.name||'Файл проекта')+' · Открыть</a>').join('');
+  show(null,t.kind,'<div class="crm-project-cover">'+cover+'</div>'+summary+section('Проект и документы',files||'<p class="muted">Чертежи и фотографии, приложенные к тендеру, будут доступны здесь.</p>')+'<h3>План работ <small>'+plan.length+' этапов</small></h3><div class="crm-plan">'+plan.map(stageView).join('')+'</div>'+addStage+journal+link('crew','Управление командой','back'),'works');
   const root=document.querySelector('main');
+  root.querySelectorAll('[data-project-file]').forEach(a=>{const url=URL.createObjectURL(t.files[Number(a.dataset.projectFile)]);a.href=url;a.target='_blank';a.rel='noopener';window.addEventListener('hashchange',()=>URL.revokeObjectURL(url),{once:true})});
+  root.querySelectorAll('select[name=type]').forEach(select=>select.insertAdjacentHTML('beforeend','<option>Фото</option>'));
   const next=root.querySelector('#crm-next');
   if(next)next.onclick=()=>{
     const form=root.querySelector(nextForm);
@@ -64,6 +69,7 @@ export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel
                 if(!Number.isSafeInteger(n)||n<1||task.count+n>task.target)throw Error('Объём превышает остаток или введён неверно.');
                 task.count+=n;task.done=task.count===task.target;text=task.name+' · +'+n+' '+task.unit;
               }else{
+                if(task.type==='Фото'&&!photo)throw Error('Добавьте фотографию результата.');
                 if(task.type==='Текст'&&!note)throw Error('Введите результат работы.');
                 task.done=true;text=task.name+' · '+(note||'Выполнено');
               }
