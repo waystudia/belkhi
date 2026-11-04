@@ -74,7 +74,17 @@ function projectCrew(t,p){
 }
 function customerProfile(){
   const p=JSON.parse(localStorage.getItem('belkhi-customer-profile')||'{}');
-  show(null,'Настройки профиля','<form id="customer-form"><label for="customer-name">Имя</label><input id="customer-name" name="name" required maxlength="90" value="'+esc(p.name||'')+'"><label for="customer-city">Город</label><input id="customer-city" name="city" maxlength="100" value="'+esc(p.city||'')+'"><label>О себе<textarea name="about" maxlength="1500">'+esc(p.about||'')+'</textarea></label><button class="primary wide">Сохранить профиль</button></form>','customer');
+  const savedHandle=localStorage.getItem('belkhi-public-handle/customer');
+  const handle=savedHandle||'belhi_'+crypto.randomUUID().replaceAll('-','').slice(0,8);
+  show(null,'Настройки профиля','<form id="customer-form" class="customer-settings">'+
+    '<div class="settings-person"><span class="settings-avatar">'+esc((p.name||'З').slice(0,1))+'</span><div><strong>Профиль заказчика</strong><small>Так вы будете выглядеть после выбора исполнителя</small></div></div>'+
+    '<section><h3>Основные сведения</h3><label for="customer-name">Имя или название<input id="customer-name" name="name" required maxlength="90" value="'+esc(p.name||'')+'" placeholder="Например, Ахмед или СК Монолит"></label>'+
+    '<div class="settings-pair"><label for="customer-type">Тип профиля<select id="customer-type" name="type"><option '+(p.type==='Частный заказчик'?'selected':'')+'>Частный заказчик</option><option '+(p.type==='Компания-заказчик'?'selected':'')+'>Компания-заказчик</option></select></label>'+
+    '<label for="customer-city">Город<input id="customer-city" name="city" maxlength="100" value="'+esc(p.city||'')+'" placeholder="Грозный"></label></div>'+
+    '<label for="customer-handle">Ник профиля<span class="handle-field"><b>@</b><input id="customer-handle" name="handle" required maxlength="30" pattern="[A-Za-z0-9._]{3,30}" value="'+esc(handle)+'"></span><small>Латиница, цифры, точка или подчёркивание</small></label></section>'+
+    '<section><h3>О себе</h3><label for="customer-about">Короткое описание<textarea id="customer-about" name="about" maxlength="500" rows="3" placeholder="Расскажите, какие объекты вы строите и что для вас важно">'+esc(p.about||'')+'</textarea></label></section>'+
+    '<div class="privacy-note"><strong>Ваши данные защищены</strong><span>До выбора исполнителя участники тендера не видят имя, профиль и контакты заказчика.</span></div>'+
+    '<button class="primary wide">Сохранить изменения</button></form>','customer');
 }
 document.addEventListener('submit',async e=>{
   const id=e.target.id;
@@ -94,7 +104,12 @@ document.addEventListener('submit',async e=>{
     }else{
       const name=data.get('name').trim();
       if(!name)throw Error('Укажите имя.');
-      if(id==='customer-form')localStorage.setItem('belkhi-customer-profile',JSON.stringify({name,city:data.get('city').trim(),about:data.get('about').trim()}));
+      if(id==='customer-form'){
+        const handle=data.get('handle').trim().toLowerCase();
+        if(!/^[a-z0-9._]{3,30}$/.test(handle))throw Error('Проверьте ник профиля: используйте латиницу, цифры, точку или подчёркивание.');
+        localStorage.setItem('belkhi-customer-profile',JSON.stringify({name,type:data.get('type'),city:data.get('city').trim(),about:data.get('about').trim()}));
+        localStorage.setItem('belkhi-public-handle/customer',handle);
+      }
       else{
         const p=myProfile(),job=data.get('job').trim();
         if(!job)throw Error('Укажите специальность.');
