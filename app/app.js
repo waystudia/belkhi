@@ -86,7 +86,7 @@ function customerProfile(){
   const savedHandle=localStorage.getItem('belkhi-public-handle/customer');
   const handle=savedHandle||'belhi_'+crypto.randomUUID().replaceAll('-','').slice(0,8);
   show(null,'Настройки профиля','<form id="customer-form" class="customer-settings">'+
-    '<div class="settings-person"><span class="settings-avatar">'+esc((p.name||'З').slice(0,1))+'</span><div><strong>Профиль заказчика</strong><small>Так вы будете выглядеть после выбора исполнителя</small></div></div>'+
+    '<div class="settings-person"><span class="settings-avatar">'+esc((p.name||'З').slice(0,1))+'</span><div><strong>Профиль заказчика</strong><small>Личные сведения вашего кабинета</small></div></div>'+
     '<section><h3>Основные сведения</h3><label for="customer-name">Имя или название<input id="customer-name" name="name" required maxlength="90" value="'+esc(p.name||'')+'" placeholder="Например, Ахмед или СК Монолит"></label>'+
     '<div class="settings-pair"><label for="customer-type">Тип профиля<select id="customer-type" name="type"><option '+(p.type==='Частный заказчик'?'selected':'')+'>Частный заказчик</option><option '+(p.type==='Компания-заказчик'?'selected':'')+'>Компания-заказчик</option></select></label>'+
     '<label for="customer-city">Город<input id="customer-city" name="city" maxlength="100" value="'+esc(p.city||'')+'" placeholder="Грозный"></label></div>'+
@@ -267,9 +267,12 @@ function market(tenders,p,params){
   search.form.oninput=results;search.form.onreset=()=>queueMicrotask(results);search.form.onsubmit=e=>e.preventDefault();results();
 }
 async function workerScreen(page,id,params,seq){
-  const p=myProfile();
+  const savedProfile=myProfile();
+  const p=savedProfile||{id:portfolioOwner(),name:'Исполнитель',skills:[]};
   if(page==='worker'){if(params.has('edit'))editProfile(p||{});else await portfolio(p||{name:'Исполнитель'},p?.id||portfolioOwner(),true,portfolioUI,'',profileReturn||(p?'market':'list'));return}
-  if(!p){location.replace('#worker?edit=1'+(page==='apply'?'&tender='+encodeURIComponent(id):''));return}
+  if(page==='apply'&&!savedProfile){
+    show(null,'Заполните профиль для отклика','<p>Укажите имя, город и специальность, чтобы заказчик мог оценить ваше предложение.</p>'+link('worker?edit=1&tender='+encodeURIComponent(id),'Заполнить профиль','btn primary'),'market');return
+  }
   if(page==='manual'){
     show(null,'Новый объект',`<form id="manual-project">
       <p class="form-note">Свой заказ в разделе «Работы». Этапы добавите после создания.</p>
@@ -330,7 +333,7 @@ async function workerScreen(page,id,params,seq){
   if(!t){location.replace('#market');return}
   current=t;
   if(page==='apply'&&t.parentOwner===p.id){location.replace('#offers/'+t.id);return}
-  if(page==='buyer'){if(t.winner!==p.id||t.demo||t.manual){location.replace('#works');return}await portfolio({...readLocal('belkhi-customer-profile',{}),type:'Заказчик',...(t.requester||{})},t.requester?.id||'customer',false,portfolioUI,'','sent/'+t.id);return}
+  if(page==='buyer'){location.replace('#works');return}
   if(page==='crm'){if(t.winner!==p.id){location.replace('#works');return}crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel});
     const children=(await records('readonly',s=>s.getAll())).filter(child=>child.parentId===t.id);
     if(seq!==generation)return;
@@ -344,7 +347,7 @@ async function workerScreen(page,id,params,seq){
   const intro=requestCard;
   if(own){
     const status=t.winner==null?'Отклик отправлен':String(t.winner)===own.id?'Заказчик выбрал вас':'Выбран другой исполнитель';
-    show(3,status,intro+'<h3>Ваше предложение</h3><b class="amount">'+money(own.price)+'</b> · '+esc(own.period)+'<p>'+esc(own.terms)+'</p>'+(String(t.winner)===p.id?link('crm/'+t.id,'Открыть объект в CRM','btn primary'):'')+(String(t.winner)===p.id&&!t.demo?link('buyer/'+t.id,'Профиль заказчика','btn secondary'):'')+projectCrew(t,p)+link('market?tab='+encodeURIComponent('Мои отклики'),'Мои отклики','btn secondary'),'market');return
+    show(3,status,intro+'<h3>Ваше предложение</h3><b class="amount">'+money(own.price)+'</b> · '+esc(own.period)+'<p>'+esc(own.terms)+'</p>'+(String(t.winner)===p.id?link('crm/'+t.id,'Открыть объект в CRM','btn primary'):'')+projectCrew(t,p)+link('market?tab='+encodeURIComponent('Мои отклики'),'Мои отклики','btn secondary'),'market');return
   }
   if(t.winner!=null){show(2,'Тендер закрыт',intro+'<p>Заказчик уже выбрал исполнителя.</p>','market');return}
   const files=(t.files||[]).map(f=>'<a class="project" download="'+esc(f.name)+'" href="'+objectURL(f)+'">'+esc(f.name)+' ↓</a>').join('');
