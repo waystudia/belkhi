@@ -312,14 +312,26 @@ async function workerScreen(page,id,params,seq){
     if(seq!==generation)return;
     screen.insertAdjacentHTML('beforeend','<h3>Субподряд</h3>'+link('new?parent='+encodeURIComponent(t.id),'＋ Нанять на часть работ','btn secondary pill')+children.map(child=>tenderRow(child,(child.winner==null?'offers/':'project/')+child.id,child.winner==null?'Сравнить отклики · '+bids(child).length:'В работе')).join(''));return}
   const own=myBid(t,p);
-  const intro=(t.photo?img(t.photo,'Объект'):'')+'<div class="summary"><b>'+esc(t.kind)+'</b><div class="meta">'+esc(t.district)+' · Бюджет '+money(t.budget)+'</div><p>'+esc(t.description)+'</p>Желаемый срок: '+esc(t.period)+'</div>';
+  const requestCard='<article class="apply-request">'+
+    (t.photo?'<div class="apply-cover">'+img(t.photo,t.kind)+'</div>':'')+
+    '<div class="apply-request-body"><div class="apply-request-head"><div><h2>'+esc(t.kind)+'</h2><span>'+esc(t.district)+'</span></div><span class="tag">Приём откликов</span></div>'+
+    '<dl class="apply-facts"><div><dt>Бюджет заказчика</dt><dd>'+money(t.budget)+'</dd></div><div><dt>Желаемый срок</dt><dd>'+esc(t.period)+'</dd></div><div><dt>Откликов</dt><dd>'+bids(t).length+'</dd></div></dl>'+
+    '<p class="apply-description">'+esc(t.description||'Описание работ не указано.')+'</p></div></article>';
+  const intro=requestCard;
   if(own){
     const status=t.winner==null?'Отклик отправлен':String(t.winner)===own.id?'Заказчик выбрал вас':'Выбран другой исполнитель';
     show(3,status,intro+'<h3>Ваше предложение</h3><b class="amount">'+money(own.price)+'</b> · '+esc(own.period)+'<p>'+esc(own.terms)+'</p>'+(String(t.winner)===p.id?link('crm/'+t.id,'Открыть объект в CRM','btn primary'):'')+(String(t.winner)===p.id&&!t.demo?link('buyer/'+t.id,'Профиль заказчика','btn secondary'):'')+projectCrew(t,p)+link('market?tab='+encodeURIComponent('Мои отклики'),'Мои отклики','btn secondary'),'market');return
   }
   if(t.winner!=null){show(2,'Тендер закрыт',intro+'<p>Заказчик уже выбрал исполнителя.</p>','market');return}
   const files=(t.files||[]).map(f=>'<a class="project" download="'+esc(f.name)+'" href="'+objectURL(f)+'">'+esc(f.name)+' ↓</a>').join('');
-  show(2,'Отклик на заявку',intro+files+'<h3>Ваше предложение</h3><form id="bid-form"><div class="pair"><div><label for="bid-price">Ваша цена, ₽</label><input id="bid-price" name="price" type="number" inputmode="numeric" min="1" max="100000000000" required></div><div><label for="bid-period">Срок выполнения</label><input id="bid-period" name="period" required maxlength="80" placeholder="Например, 14 дней"></div></div><label for="bid-comment">Комментарий</label><textarea id="bid-comment" name="terms" maxlength="1500" placeholder="Что входит в цену и когда готовы начать"></textarea><button class="primary wide">Отправить отклик</button></form>','market');
+  const performer='<div class="bid-profile">'+avatar(p)+'<div><small>Отклик от</small><strong>'+esc(p.name)+'</strong><span>'+esc([p.type,p.city].filter(Boolean).join(' · '))+'</span></div>'+link('worker?edit=1','Изменить профиль','btn secondary')+'</div>';
+  show(2,'Отклик на заявку',requestCard+
+    (files?'<details class="fold apply-files"><summary>Материалы заказчика <small>'+(t.files||[]).length+' файлов</small></summary><div>'+files+'</div></details>':'')+
+    performer+'<section class="bid-compose"><div class="bid-compose-head"><h3>Ваше предложение</h3><span>Заказчик увидит цену, срок и комментарий</span></div>'+
+    '<form id="bid-form"><div class="bid-fields"><label for="bid-price">Стоимость работ, ₽<input id="bid-price" name="price" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="Например, '+Math.round(Number(t.budget)*.9).toLocaleString('ru-RU')+'"></label>'+
+    '<label for="bid-period">Срок выполнения<input id="bid-period" name="period" list="period-options" required maxlength="80" placeholder="Например, 3 недели"><datalist id="period-options"><option value="До 2 недель"><option value="3 недели"><option value="1 месяц"><option value="1–2 месяца"></datalist></label></div>'+
+    '<label for="bid-comment">Комментарий заказчику <small>по желанию</small><textarea id="bid-comment" name="terms" maxlength="1500" placeholder="Укажите, что входит в стоимость, когда готовы начать и какую гарантию даёте"></textarea></label>'+
+    '<div class="bid-submit"><span>Контакты откроются после выбора исполнителя.</span><button class="primary" type="submit">Отправить отклик</button></div></form></section>','market');
 }
 document.addEventListener('submit',async event=>{
   const form=event.target;
