@@ -59,7 +59,7 @@ const navIcons={
   worker:'M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 21a7 7 0 0 1 14 0'
 };
 function bottomNav(worker,page){
-  const items=worker?[['market','Тендеры','market'],['works','Работы','works'],['crew','Команда','crew'],['worker','Профиль','worker']]:[['list','Мои объекты','works'],['customer','Профиль','worker']];
+  const items=[['market','Тендеры','market'],['list','Мои заказы','works'],['works','Работы','works'],['crew','Команда','crew'],['worker','Профиль','worker']];
   const active=({crm:'works',manual:'works',apply:'market',sent:'works',new:'list',offers:'list',profile:'list',project:'list'})[page]||page;
   const nav=document.querySelector('#bottom-nav'),signature=items.map(item=>item[0]).join('|');
   if(nav.dataset.items!==signature){
@@ -135,16 +135,16 @@ function show(step,title,body,back=''){
   const role=workerMode?'Исполнитель':'Заказчик';
   bottomNav(workerMode,route().page);
   const steps=workerMode?['Мой профиль','Доступные заявки','Отклик на заявку','Мой отклик']:roles;
-  document.querySelector('.head>span').textContent='Кабинет '+(workerMode?'исполнителя':'заказчика');
-  document.querySelector('.rail small').textContent='БЕЛХИ / '+role.toUpperCase();
-  document.querySelector('.rail h2').textContent=workerMode?'От профиля до заказа':'От заявки до стройки';
+  document.querySelector('.head>span').textContent='Мой кабинет';
+  document.querySelector('.rail small').textContent='БЕЛХИ';
+  document.querySelector('.rail h2').textContent='От заявки до стройки';
   const toggle=document.querySelector('#switch-role');
-  toggle.textContent=workerMode?'В кабинет заказчика':'В кабинет исполнителя';
-  toggle.href=workerMode?(current?'#offers/'+current.id:'#list'):'#worker';
-  document.querySelector('.brand').href=workerMode?'#works':'#list';
+  toggle.textContent='Создать тендер';
+  toggle.href='#new';
+  document.querySelector('.brand').href='#market';
   const heading=back
     ? '<div class="screen-heading"><a href="#'+esc(back)+'" aria-label="Назад" title="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></a><h1>'+esc(title)+'</h1></div>'
-    : '<span class="eyebrow">'+role+'</span><h1>'+esc(title)+'</h1>';
+    : '<h1>'+esc(title)+'</h1>';
   screen.innerHTML=heading+body;
   document.querySelector('#steps').innerHTML=steps.map((v,i)=>'<li class="'+(i===step?'active':'')+'"><span class="num">'+(i+1)+'</span>'+v+'</li>').join('');
   document.title=title+' · Белхи';
@@ -231,7 +231,7 @@ function tenderRow(t, target, status, ownerVisible=false){
   return '<a class="tender-card" href="#'+esc(target)+'">'+thumb+'<div class="tender-details"><strong>'+esc(t.kind)+'</strong><span class="meta">'+esc(t.district)+' · '+esc(t.period)+'</span><div class="tender-price"><b>'+money(t.budget)+'</b><span class="tag">'+esc(status)+'</span></div>'+(ownerVisible?customerBadge(t):'')+'</div></a>';
 }
 function market(tenders,p,params){
-  const filter=params.get('tab')||'По специальности';
+  const filter=params.get('tab')||(p.skills.length?'По специальности':'Все');
   const relevant=tenders.filter(t=>filter==='Мои отклики'?myBid(t,p):t.winner==null&&t.parentOwner!==p.id&&(filter==='Все'||p.skills.includes(t.kind))).sort((a,b)=>b.created-a.created);
   const choices=key=>[...new Set(relevant.map(t=>t[key]).filter(Boolean))].sort();
   const filters=`<form id="feed-filter">
@@ -406,9 +406,7 @@ async function render(){
     document.querySelector('#bottom-nav').hidden=false;
     if(page==='admin'||page==='catalog'){await catalog(page==='admin',params.get('section'),{show,notice,render,sync:()=>seed(records)});return}
     if(page==='customer'){
-      if(params.has('edit')){customerProfile();return}
-      await portfolio({...readLocal('belkhi-customer-profile',{}),type:'Заказчик'},'customer',true,portfolioUI,'','list');
-      return
+      location.replace('#worker'+(params.has('edit')?'?edit=1':''));return
     }
     if(page==='inbox'){location.replace('#list');return}
     if(page==='new'){
