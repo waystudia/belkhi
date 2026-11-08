@@ -3,7 +3,7 @@ export function progress(plan=[]){
   const tasks=plan.flatMap(stage=>stage.tasks);
   return {done:tasks.filter(t=>t.done).length,total:tasks.length};
 }
-export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel}){
+export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel,objectURL}){
   const plan=t.plan||[], log=t.log||[], members=teamMembers(p);
   const {done,total}=progress(plan);
   const field=(label,name,attrs='')=>'<label>'+label+'<input required name="'+name+'" '+attrs+'></label>';
@@ -35,7 +35,7 @@ export function crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel
   const files=(t.files||[]).map((f,i)=>'<a class="project" data-project-file="'+i+'">'+esc(f.name||'Файл проекта')+' · Открыть</a>').join('');
   show(null,t.kind,'<div class="crm-project-cover">'+cover+'</div>'+summary+section('Проект и документы',files||'<p class="muted">Чертежи и фотографии, приложенные к тендеру, будут доступны здесь.</p>')+'<h3>План работ <small>'+plan.length+' этапов</small></h3><div class="crm-plan">'+plan.map(stageView).join('')+'</div>'+addStage+journal+link('crew','Управление командой','back'),'works');
   const root=document.querySelector('main');
-  root.querySelectorAll('[data-project-file]').forEach(a=>{const url=URL.createObjectURL(t.files[Number(a.dataset.projectFile)]);a.href=url;a.target='_blank';a.rel='noopener';window.addEventListener('hashchange',()=>URL.revokeObjectURL(url),{once:true})});
+  root.querySelectorAll('[data-project-file]').forEach(a=>{a.href=objectURL(t.files[Number(a.dataset.projectFile)]);a.target='_blank';a.rel='noopener'});
   root.querySelectorAll('select[name=type]').forEach(select=>select.insertAdjacentHTML('beforeend','<option>Фото</option>'));
   const next=root.querySelector('#crm-next');
   if(next)next.onclick=()=>{

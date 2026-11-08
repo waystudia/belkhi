@@ -1,4 +1,5 @@
 import {projectUrl,publishableKey} from './cloud.js';
+import {accountStorage} from './account-storage.js';
 export const examples=[
   ['Строительство дома','Истра','Одноэтажный дом из газобетона, 120 м². Фундамент, коробка и кровля.',3000000,'3–5 месяцев','house','Мария Соколова','maria'],
   ['Отделочные работы','Москва','Чистовая отделка квартиры 64 м². Стены под покраску и укладка пола.',450000,'1–2 месяца','room','Иван Соколов','ivan'],
@@ -21,7 +22,7 @@ export async function seed(records){
       })
     }));
     online=true;
-  }catch{if(localStorage.getItem('belkhi-demo-v1'))return}
+  }catch{if(accountStorage.getItem('belkhi-demo-v1'))return}
   await records('readwrite',store=>{
     const ids=new Set(rows.map(t=>'demo-'+t.position));
     const request=store.openCursor();
@@ -35,5 +36,5 @@ export async function seed(records){
       };
     }
   });
-  localStorage.setItem('belkhi-demo-v1','1');
+  accountStorage.setItem('belkhi-demo-v1','1');
 }

@@ -1,17 +1,11 @@
-import {projectUrl,publishableKey} from './cloud.js';
+import {api, currentAuth, signOut} from './auth.js';
 const tables={Тендеры:'belkhi_demo_tenders',Заказчики:'belkhi_people',Исполнители:'belkhi_people',Отклики:'belkhi_bids',Журнал:'belkhi_journal'};
 const labels={kind:'Тип работ',district:'Район',description:'Описание',budget:'Бюджет, ₽',period:'Срок',photo:'Фото',owner:'Заказчик',name:'Имя или название',city:'Город',about:'О себе',tender:'Тендер',performer:'Исполнитель',price:'Цена, ₽',terms:'Условия'};
 const fields={Тендеры:['kind','district','description','budget','period','owner','photo'],Заказчики:['name','city','about','photo'],Исполнители:['name','city','about','photo'],Отклики:['tender','performer','price','period','terms']};
 const pictures={house:'Дом',house2:'Коттедж',room:'Квартира',roof:'Кровля',site:'Фундамент',pan:'Стройка',man:'Мастер',team:'Компания',team2:'Бригада',maria:'Мария',ivan:'Иван',musa:'Муса'};
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let session;
-async function request(path,method='GET',body,token=session?.access_token){
- const headers={apikey:publishableKey,'Content-Type':'application/json'};
- if(token)headers.Authorization='Bearer '+token;
- if(path.startsWith('/rest/')&&method!=='GET')headers.Prefer='return=representation';
- const res=await fetch(projectUrl+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
- const data=await res.text();if(!res.ok){if(res.status===401)session=null;throw Error(res.status===401?'Войдите снова или проверьте пароль.':'Supabase: '+(JSON.parse(data||'{}').message||res.status))}
- return data?JSON.parse(data):null;
+function request(path,method='GET',body,token){
+ return api(path,{method,body,token,representation:path.startsWith('/rest/')&&method!=='GET'});
 }
 export async function catalog(admin,section,{show,notice,render,sync}){
  section=section||'Тендеры';
@@ -19,17 +13,9 @@ export async function catalog(admin,section,{show,notice,render,sync}){
  if(admin)sections.push('Пароль');
  if(!sections.includes(section))section='Тендеры';
  const base=admin?'admin':'catalog', root=document.querySelector('main');
- const tabbar='<div class="admin-tabs">'+sections.map(k=>'<a class="'+(k===section?'selected':'')+'" href="#'+base+'?section='+encodeURIComponent(k)+'">'+k+'</a>').join('')+'</div>';
+ const tabbar=(admin?'<a class="back" href="#admin">Управление аккаунтами</a>':'')+'<div class="admin-tabs">'+sections.map(k=>'<a class="'+(k===section?'selected':'')+'" href="#'+base+'?section='+encodeURIComponent(k)+'">'+k+'</a>').join('')+'</div>';
  const password=(name,label,mode)=>'<label>'+label+'<input name="'+name+'" type="password" required minlength="8" autocomplete="'+mode+'"></label>';
  function paint(content){show(null,admin?'Администрирование':'Демонстрационный каталог',content);document.querySelector('#bottom-nav').hidden=true}
- if(admin&&!session){
-   paint('<form id="cloud-login"><label>Почта администратора<input required type="email" name="email" autocomplete="username"></label>'+password('password','Пароль','current-password')+'<button class="primary wide">Войти</button></form>');
-   root.querySelector('form').onsubmit=async e=>{e.preventDefault();try{
-     const f=new FormData(e.target),auth=await request('/auth/v1/token?grant_type=password','POST',Object.fromEntries(f),null);
-     if(auth.user?.app_metadata?.belkhi_role!=='owner')throw Error('Для этого аккаунта нет прав администратора.');
-     session=auth;await render();
-   }catch(err){notice(err.message)}};return;
- }
  let data;
  const here=location.hash;
  paint('<p>Загрузка каталога…</p>');
@@ -61,14 +47,15 @@ export async function catalog(admin,section,{show,notice,render,sync}){
  }
  const body=section==='Пароль'?'<form id="cloud-password">'+password('old','Текущий пароль','current-password')+password('password','Новый пароль','new-password')+'<button>Сменить пароль</button></form>':section==='Журнал'?data.Журнал.map(r=>'<p>'+escape(new Date(r.at).toLocaleString('ru'))+' · '+escape(({INSERT:'Создание',UPDATE:'Изменение',DELETE:'Удаление'})[r.action])+' · '+escape(r.label)+'</p>').join('')||'<p>Действий пока нет.</p>':(admin?'<details><summary class="attach">＋ Добавить запись</summary>'+form()+'</details>':'')+data[section].map(card).join('');
  paint('<p class="eyebrow">ДЕМОНСТРАЦИОННЫЕ ДАННЫЕ</p>'+tabbar+body+(admin?'<button id="cloud-logout" class="wide">Выйти</button>':''));
- root.querySelector('#cloud-logout')?.addEventListener('click',async()=>{try{await request('/auth/v1/logout','POST')}finally{session=null;render()}});
+ root.querySelector('#cloud-logout')?.addEventListener('click',async()=>{try{await signOut()}finally{location.reload()}});
  root.querySelectorAll('form').forEach(f=>f.onsubmit=async e=>{
-  e.preventDefault();if(!session)return;
+  e.preventDefault();if(!currentAuth())return;
   const values=Object.fromEntries(new FormData(f));const button=e.submitter;button.disabled=true;
   try{
    if(f.id==='cloud-password'){
-    const fresh=await request('/auth/v1/token?grant_type=password','POST',{email:session.user.email,password:values.old},null);
-    await request('/auth/v1/user','PUT',{password:values.password},fresh.access_token);session=null;
+    const fresh=await request('/auth/v1/token?grant_type=password','POST',{email:currentAuth().user.email,password:values.old},null);
+    await request('/auth/v1/user','PUT',{password:values.password},fresh.access_token);
+    try{await signOut()}finally{location.reload()}return;
    }else{
     const id=f.dataset.record, removing=button.name==='remove';
     if(removing&&!confirm('Удалить эту запись? Связанные отклики также будут удалены.'))return;

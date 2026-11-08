@@ -1,7 +1,22 @@
-import {portfolio} from './portfolio.js?v=20261104-1';
+import {portfolio} from './portfolio.js?v=20261109-1';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';
+import {accountDestination, currentAuth, currentIdentity, isOwner, registrationStep, restoreAuth, watchSession} from './auth.js';
+import {accountScreen, demoMode} from './account.js';
+import {registrationPages, registrationScreen} from './registration.js';
+import {accountKey, accountStorage, initializeAccountStorage} from './account-storage.js';
+import {moderation} from './moderation.js';
+import {icon} from './icons.js';
+import {isStoredFile, packFile, unpackFile} from './file-storage.js';
+import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js';
+
+let authError;
+try { await restoreAuth(); }
+catch (error) { authError = error.message; }
+if(currentAuth()) sessionStorage.removeItem('belkhi-demo-session');
+initializeAccountStorage();
+watchSession();
 const screen = document.querySelector('#screen');
 const dialog = document.querySelector('dialog');
 const roles = ['Создание тендера', 'Отклики', 'Профиль исполнителя', 'Мой объект'];
@@ -13,7 +28,7 @@ const people = [
   {name:'ДомСтрой Групп', type:'Компания', photo:'house2', rating:'4,7', reviews:19, factor:31/30, years:7, projects:76, terms:'Работы, инструмент и организация доставки', portfolio:['pan','room','house2'], review:'Удобно было сверять ход работ с планом. Получили фото и акт по завершении.'}
 ];
 const db = await new Promise((resolve,reject) => {
-  const request = indexedDB.open('belkhi-customer',1);
+  const request = indexedDB.open(accountKey('belkhi-customer'),1);
   request.onupgradeneeded = () => request.result.createObjectStore('tenders',{keyPath:'id'});
   request.onsuccess = () => resolve(request?.result);
   request.onerror = () => reject(request.error);
@@ -31,7 +46,7 @@ const esc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const money = n => new Intl.NumberFormat('ru-RU').format(n)+' ₽';
 function bids(t) {
   if(t.catalogBids)return [...(t.bids||[]),...t.catalogBids.map(p=>({portfolio:[],rating:'—',projects:0,years:0,review:'Отзывов пока нет.',...people[p.id],...p,about:p.id==='0' && (!p.about || p.about==='Дома под ключ. Работаем с 2016 года.')?people[0].about:p.about||people[p.id]?.about}))];
-  const overrides=JSON.parse(localStorage.getItem('belkhi-firms')||'{}');
+  const overrides=JSON.parse(accountStorage.getItem('belkhi-firms')||'{}');
   const samples = people.map((base, i) => ({
     ...base,...overrides[i], id:String(i), demo:true,
     price:Math.max(1,Math.round(t.budget*base.factor)),
@@ -40,38 +55,47 @@ function bids(t) {
   return [...(t.bids || []), ...samples.map(p=>({...p,...t.offerEdits?.[p.id]})).filter(p=>(!p.deleted&&!p.hidden) || String(t.winner)===p.id)];
 }
 function bidById(t,id){return bids(t).find(p=>p.id===String(id))}
-const channel = new BroadcastChannel('belkhi-tenders');
+const channel = new BroadcastChannel(accountKey('belkhi-tenders'));
 channel.onmessage=({data})=>{
   if(['offers','list','market'].includes(route().page)||(route().page==='sent'&&route().id===data))render();
 };
 const img = (key,alt='') => '<img src="media/'+encodeURIComponent(key)+'.jpg" alt="'+esc(alt)+'">';
 const link=(hash,text,cls='btn')=>'<a class="'+cls+'" href="#'+esc(hash)+'">'+esc(text)+'</a>';
 const tabs=(values,current)=>'<div class="tabs">'+values.map(v=>'<button data-tab="'+esc(v)+'" aria-pressed="'+(v===current)+'">'+esc(v)+'</button>').join('')+'</div>';
-let selectedFiles=[], draft={}, current, generation=0, urls=[];
+let selectedFiles=[], draft={}, current, generation=0, urls=[], fileUrls=new WeakMap();
 let profileReturn='';
 function notice(msg){document.querySelector('#message').textContent=msg}
-function objectURL(file){const url=URL.createObjectURL(file);urls.push(url);return url}
+function objectURL(file){
+  if(fileUrls.has(file))return fileUrls.get(file);
+  const url=URL.createObjectURL(unpackFile(file));
+  urls.push(url);fileUrls.set(file,url);return url;
+}
 const workerPages=['worker','market','works','crew','apply','sent','crm','manual','buyer'];
-const navIcons={
-  market:'M5 3h10l4 4v14H5z M15 3v5h4 M9 12h6 M9 16h4',
-  works:'M3 7h7l2 3h9v10H3z M3 7V5h7l2 2',
-  crew:'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M3 21v-2a6 6 0 0 1 12 0v2 M17 6a3 3 0 0 1 0 6 M17 15a5 5 0 0 1 5 5v1',
-  worker:'M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M5 21a7 7 0 0 1 14 0'
-};
-function bottomNav(worker,page){
-  const items=[['market','Тендеры','market'],['list','Мои заказы','works'],['works','Работы','works'],['crew','Команда','crew'],['worker','Профиль','worker']];
-  const active=({crm:'works',manual:'works',apply:'market',sent:'works',new:'list',offers:'list',profile:'list',project:'list'})[page]||page;
+const activeProfile=()=>currentAuth() && accountDestination()!=='market'?'customer':'worker';
+
+function bottomNav(page, params){
+  const customerMode = activeProfile()==='customer';
+  const items = [
+    ['market','Лента','home'],
+    ['market?view=grid','Поиск','search'],
+    ['new','Создать тендер','add'],
+    [customerMode?'list':'works',customerMode?'Мои объекты':'Работы','folder'],
+    [activeProfile(),'Профиль','person']
+  ];
+  const active = page==='market' && params.get('view')==='grid' ? 'market?view=grid'
+    : ({crm:'works',manual:'works',crew:'works',apply:'market',sent:'works',offers:'list',
+      profile:'list',project:'list',customer:activeProfile(),worker:activeProfile(),account:activeProfile(),'activate-worker':activeProfile()})[page] || page;
   const nav=document.querySelector('#bottom-nav'),signature=items.map(item=>item[0]).join('|');
   if(nav.dataset.items!==signature){
     nav.dataset.items=signature;
-    nav.innerHTML=items.map(([path,title,icon])=>'<a href="#'+path+'" aria-label="'+title+'" title="'+title+'"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+navIcons[icon]+'"/></svg></a>').join('');
+    nav.innerHTML=items.map(([path,title,symbol])=>'<a href="#'+path+'" aria-label="'+title+'" title="'+title+'">'+icon(symbol)+'<span>'+title+'</span></a>').join('');
   }
   for(const item of nav.querySelectorAll('a')){
-    const selected=item.getAttribute('href')==='#'+active;
-    if(selected)item.setAttribute('aria-current','page');else item.removeAttribute('aria-current');
+    if(item.hash==='#'+active)item.setAttribute('aria-current','page');
+    else item.removeAttribute('aria-current');
   }
 }
-function teamMembers(p){return JSON.parse(localStorage.getItem('belkhi-team-'+p.id)||'[]')}
+function teamMembers(p){return JSON.parse(accountStorage.getItem('belkhi-team-'+p.id)||'[]')}
 function crewScreen(p){
   const members=teamMembers(p);
   show(null,'Моя команда','<p class="muted">Добавьте людей, которых сможете назначать на выигранные объекты.</p>'+members.map(m=>'<div class="stage"><span class="avatar">'+esc(m.name.slice(0,1))+'</span><div><b>'+esc(m.name)+'</b><div class="meta">'+esc(m.job)+'</div></div></div>').join('')+'<form id="crew-form"><label for="member">Имя работника</label><input id="member" name="name" required maxlength="90"><label for="job">Специальность</label><input id="job" name="job" required maxlength="100" placeholder="Например, каменщик"><button class="primary wide">Добавить работника</button></form>');
@@ -81,16 +105,33 @@ function projectCrew(t,p){
   const team=teamMembers(p);
   return '<h3>Работники на объекте</h3><form id="staff-form"><div class="chips">'+team.map(m=>'<label><input type="checkbox" name="member" value="'+m.id+'" '+((t.staff||[]).includes(m.id)?'checked':'')+'> '+esc(m.name)+' · '+esc(m.job)+'</label>').join('')+'</div>'+(team.length?'<button class="wide secondary">Сохранить состав</button>':'<p>Добавьте первого работника в команду.</p>')+'</form>'+link('crew','Моя команда','back');
 }
+function customerDetails(){
+  const p=JSON.parse(accountStorage.getItem('belkhi-customer-profile')||'null') || {name: currentAuth()?.user?.user_metadata?.display_name};
+  const username=currentIdentity()?.username;
+  return {p,username,savedHandle:username||accountStorage.getItem('belkhi-public-handle/customer')};
+}
 function customerProfile(){
-  const p=JSON.parse(localStorage.getItem('belkhi-customer-profile')||'{}');
-  const savedHandle=localStorage.getItem('belkhi-public-handle/customer');
+  const {p,savedHandle}=customerDetails();
+  const name=p.name|| (savedHandle?'@'+savedHandle:'Заказчик');
+  const type=p.type||'Частный заказчик';
+  show(null,'Профиль заказчика',`<section class="customer-overview">
+    <div class="customer-identity"><span class="settings-avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</span>
+      <div><strong>${esc(name)}</strong>
+      ${savedHandle&&name!=='@'+savedHandle?'<small>@'+esc(savedHandle)+'</small>':''}
+      <small>${esc([type,p.city].filter(Boolean).join(' · '))}</small></div></div>
+    ${p.about?'<p class="customer-about">'+esc(p.about)+'</p>':''}
+    <div class="customer-actions">${link('customer?edit=1','Редактировать профиль','btn secondary')}
+      ${link('list','Мои объекты','btn')}</div>
+  </section>`, 'list');
+}
+function editCustomerProfile(){
+  const {p,username,savedHandle}=customerDetails();
   const handle=savedHandle||'belhi_'+crypto.randomUUID().replaceAll('-','').slice(0,8);
-  show(null,'Настройки профиля','<form id="customer-form" class="customer-settings">'+
-    '<div class="settings-person"><span class="settings-avatar">'+esc((p.name||'З').slice(0,1))+'</span><div><strong>Профиль заказчика</strong><small>Личные сведения вашего кабинета</small></div></div>'+
+  show(null,'Редактировать профиль','<form id="customer-form" class="customer-settings">'+
     '<section><h3>Основные сведения</h3><label for="customer-name">Имя или название<input id="customer-name" name="name" required maxlength="90" value="'+esc(p.name||'')+'" placeholder="Например, Ахмед или СК Монолит"></label>'+
     '<div class="settings-pair"><label for="customer-type">Тип профиля<select id="customer-type" name="type"><option '+(p.type==='Частный заказчик'?'selected':'')+'>Частный заказчик</option><option '+(p.type==='Компания-заказчик'?'selected':'')+'>Компания-заказчик</option></select></label>'+
     '<label for="customer-city">Город<input id="customer-city" name="city" maxlength="100" value="'+esc(p.city||'')+'" placeholder="Грозный"></label></div>'+
-    '<label for="customer-handle">Ник профиля<span class="handle-field"><b>@</b><input id="customer-handle" name="handle" required maxlength="30" pattern="[A-Za-z0-9._]{3,30}" value="'+esc(handle)+'"></span><small>Латиница, цифры, точка или подчёркивание</small></label></section>'+
+    '<label for="customer-handle">Ник профиля<span class="handle-field"><b>@</b><input id="customer-handle" name="handle" required maxlength="30" pattern="[A-Za-z0-9._]{3,30}" '+(username?'readonly ':'')+'value="'+esc(handle)+'"></span><small>'+(username?'@логин аккаунта':'Латиница, цифры, точка или подчёркивание')+'</small></label></section>'+
     '<section><h3>О себе</h3><label for="customer-about">Короткое описание<textarea id="customer-about" name="about" maxlength="500" rows="3" placeholder="Расскажите, какие объекты вы строите и что для вас важно">'+esc(p.about||'')+'</textarea></label></section>'+
     '<div class="privacy-note"><strong>Ваши данные защищены</strong><span>До выбора исполнителя участники тендера не видят имя, профиль и контакты заказчика.</span></div>'+
     '<button class="primary wide">Сохранить изменения</button></form>','customer');
@@ -116,45 +157,69 @@ document.addEventListener('submit',async e=>{
       if(id==='customer-form'){
         const handle=data.get('handle').trim().toLowerCase();
         if(!/^[a-z0-9._]{3,30}$/.test(handle))throw Error('Проверьте ник профиля: используйте латиницу, цифры, точку или подчёркивание.');
-        localStorage.setItem('belkhi-customer-profile',JSON.stringify({name,type:data.get('type'),city:data.get('city').trim(),about:data.get('about').trim()}));
-        localStorage.setItem('belkhi-public-handle/customer',handle);
+        accountStorage.setItem('belkhi-customer-profile',JSON.stringify({name,type:data.get('type'),city:data.get('city').trim(),about:data.get('about').trim()}));
+        accountStorage.setItem('belkhi-public-handle/customer',handle);
       }
       else{
         const p=myProfile(),job=data.get('job').trim();
         if(!job)throw Error('Укажите специальность.');
-        localStorage.setItem('belkhi-team-'+p.id,JSON.stringify([...teamMembers(p),{id:crypto.randomUUID(),name,job}]));
+        accountStorage.setItem('belkhi-team-'+p.id,JSON.stringify([...teamMembers(p),{id:crypto.randomUUID(),name,job}]));
       }
     }
-    if(id==='customer-form'){location.hash='customer';return}
+    if(id==='customer-form'){if(!finishWorkspaceEdit('#customer'))await render();return}
     await render();notice('Сохранено');
   }catch(error){notice(error.message)}
 });
 
 function show(step,title,body,back=''){
   const workerMode=workerPages.includes(route().page);
-  const role=workerMode?'Исполнитель':'Заказчик';
-  bottomNav(workerMode,route().page);
+  const {page,params}=route();
+  bottomNav(page,params);
   const steps=workerMode?['Мой профиль','Доступные заявки','Отклик на заявку','Мой отклик']:roles;
-  document.querySelector('.head>span').textContent='Мой кабинет';
+  document.querySelector('.head>span').textContent=document.body.dataset.surface==='admin'?'Администрирование':'Мой кабинет';
   document.querySelector('.rail small').textContent='БЕЛХИ';
   document.querySelector('.rail h2').textContent='От заявки до стройки';
   const toggle=document.querySelector('#switch-role');
-  toggle.textContent='Создать тендер';
-  toggle.href='#new';
-  document.querySelector('.brand').href='#market';
+  toggle.textContent=currentAuth()?'Аккаунт':'Войти';
+  toggle.href=currentAuth()?'#account':'#login';
+  document.querySelector('.brand').href=currentAuth()?'#'+accountDestination():demoMode()?'#market':'#login';
+  document.querySelector('#bottom-nav').hidden=document.body.dataset.surface!=='app';
+  document.querySelector('#workspace-saved').hidden=document.body.dataset.surface!=='app';
   const heading=back
     ? '<div class="screen-heading"><a href="#'+esc(back)+'" aria-label="Назад" title="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></a><h1>'+esc(title)+'</h1></div>'
     : '<h1>'+esc(title)+'</h1>';
+  screen.dataset.page=page;
   screen.innerHTML=heading+body;
   document.querySelector('#steps').innerHTML=steps.map((v,i)=>'<li class="'+(i===step?'active':'')+'"><span class="num">'+(i+1)+'</span>'+v+'</li>').join('');
   document.title=title+' · Белхи';
 }
 function form(){
   const options=(values,value)=>values.map(v=>'<option '+(v===value?'selected':'')+'>'+esc(v)+'</option>').join('');
-  show(0,'Создание тендера','<form id="tender"><label for="kind">Тип работ</label><select id="kind" name="kind">'+options(kinds,draft.kind)+'</select><label for="description">Описание проекта</label><textarea id="description" name="description" maxlength="3000" required placeholder="Например, одноэтажный дом из газобетона. Нужны фундамент, коробка и кровля.">'+esc(draft.description||'')+'</textarea><label for="district">Город или район</label><input id="district" name="district" required maxlength="100" value="'+esc(draft.district||'')+'" placeholder="Например, Истринский район"><div class="pair"><div><label for="budget">Бюджет, ₽</label><input id="budget" name="budget" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="3 000 000" value="'+esc(draft.budget||'')+'"></div><div><label for="period">Срок выполнения</label><select id="period" name="period">'+options(durations,draft.period||'3–5 месяцев')+'</select></div></div><p class="fieldlabel">Фото, планы, чертежи</p><div id="files"></div><input class="hiddenfile" id="upload" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple><label class="attach" for="upload">＋ Добавить файл</label><p class="caption">До 5 файлов JPEG, PNG, WebP или PDF, до 10 МБ каждый.</p><button class="primary wide">Создать тендер</button><p class="caption">Сохранится на этом устройстве. Для сравнения появятся демонстрационные отклики.</p></form>','list');
+  show(0,'Создание тендера',`<form id="tender">
+    <section class="tender-attachments" aria-labelledby="attachments-title">
+      <div class="tender-attachment-head"><div><h2 id="attachments-title">Фото и чертежи</h2><p>До 5 файлов JPEG, PNG, WebP или PDF, до 10 МБ каждый.</p></div>
+      <input class="hiddenfile" id="upload" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
+      <label class="attach" for="upload">${icon('add')} Добавить файл</label></div>
+      <div id="files"></div>
+    </section>
+    <label for="kind">Тип работ<select id="kind" name="kind">${options(kinds,draft.kind)}</select></label>
+    <label for="description">Описание проекта<textarea id="description" name="description" maxlength="3000" required placeholder="Например, нужны фундамент, коробка и кровля.">${esc(draft.description||'')}</textarea></label>
+    <label for="district">Город или район<input id="district" name="district" required maxlength="100" value="${esc(draft.district||'')}" placeholder="Например, Истринский район"></label>
+    <div class="pair">
+      <label for="budget">Бюджет, ₽<input id="budget" name="budget" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="3 000 000" value="${esc(draft.budget||'')}"></label>
+      <label for="period">Срок выполнения<select id="period" name="period">${options(durations,draft.period||'3–5 месяцев')}</select></label>
+    </div>
+    <button class="primary wide">Создать тендер</button><p class="caption">Тендер сохранится на этом устройстве. Для сравнения появятся демонстрационные отклики.</p>
+  </form>`,'list');
   fileList();
 }
-function fileList(){document.querySelector('#files').innerHTML=selectedFiles.map((f,i)=>'<div class="file">'+esc(f.name)+'<button type="button" data-remove="'+i+'" aria-label="Удалить '+esc(f.name)+'">×</button></div>').join('')}
+function fileList(){
+  document.querySelector('#files').innerHTML=selectedFiles.map((file,index)=>`<div class="file">
+    ${file.type.startsWith('image/')?'<img src="'+esc(objectURL(file))+'" alt="">':''}
+    <span>${esc(file.name)}</span><button type="button" data-remove="${index}" aria-label="Удалить ${esc(file.name)}">×</button>
+  </div>`).join('');
+}
+
 function customerBadge(t){
   if(!t.owner)return '';
   const record=readLocal('belkhi-customers',{})[t.owner];
@@ -167,7 +232,7 @@ function offers(t,filter){
   const filters=['Все',...Object.keys(types)].map(name=>
     '<button data-tab="'+name+'" aria-pressed="'+(name===filter)+'">'+name+'</button>'
   ).join('');
-  const photo=t.files?.find(file=>file instanceof Blob && file.type.startsWith('image/'));
+  const photo=t.files?.find(file=>isStoredFile(file) && file.type.startsWith('image/'));
   const cover=photo?'<img src="'+objectURL(photo)+'" alt="Фото объекта">':t.id==='demo-3' && t.photo==='site' && t.description?.includes('10 × 8')?'<img src="media/foundation-plan.svg" alt="Схема ленточного основания 10 на 8 метров">':t.photo?img(t.photo,'Фото объекта'):'';
   const post=`<article class="tender-post">
     <div class="post-heading"><strong>${esc(t.kind)}</strong><small>${esc(t.district)}</small></div>
@@ -200,78 +265,170 @@ function project(t,tab){
 const profileKey='belkhi-specialist-v1';
 function portfolioOwner(){
   const key='belkhi-portfolio-owner';
-  if(!localStorage.getItem(key))localStorage.setItem(key,crypto.randomUUID());
-  return localStorage.getItem(key);
+  if(!accountStorage.getItem(key))accountStorage.setItem(key,crypto.randomUUID());
+  return accountStorage.getItem(key);
 }
 function myProfile(){
-  const p=JSON.parse(localStorage.getItem(profileKey)||'null');
-  return p && {...p,teamSize:teamMembers(p).length+1};
+  const p=JSON.parse(accountStorage.getItem(profileKey)||'null');
+  return p && {...p,handle:currentIdentity()?.username||p.handle,teamSize:teamMembers(p).length+1};
+}
+function workerEnabled(){
+  const auth=currentAuth();
+  const data=auth?.user?.user_metadata;
+  return !auth || data?.belkhi_worker_enabled===true || data?.belkhi_starting_mode==='worker' || Boolean(myProfile());
 }
 function editProfile(p={}){
   show(null,'Настройки профиля','<div class="profile-id">'+avatar({...p,name:p.name||'И'})+'<div><strong>'+esc(p.name||'Новый исполнитель')+'</strong><small>'+esc([p.type,p.city].filter(Boolean).join(' · '))+'</small></div></div><form id="worker-profile"><details class="fold" '+(!p.id?'open':'')+'><summary>Основные сведения</summary><div><label for="work-type">От чьего лица вы работаете</label><select id="work-type" name="type">'+['Частный мастер','Бригада','Компания'].map(v=>'<option '+(p.type===v?'selected':'')+'>'+v+'</option>').join('')+'</select><label for="work-name">Имя или название команды</label><input id="work-name" name="name" maxlength="90" required value="'+esc(p.name||'')+'"></div></details><details class="fold" '+(!p.id?'open':'')+'><summary>Специализация<small>'+esc(p.skills?.join(' · ')||'Выберите виды работ')+'</small></summary><div><fieldset class="specialties"><legend>Специализация</legend><div class="chips">'+kinds.map(k=>'<label><input type="checkbox" name="skills" value="'+esc(k)+'" '+(p.skills?.includes(k)?'checked':'')+'> '+esc(k)+'</label>').join('')+'</div></fieldset></div></details><details class="fold" '+(!p.id?'open':'')+'><summary>Город и опыт</summary><div><label for="work-city">Город</label><input id="work-city" name="city" required maxlength="100" value="'+esc(p.city||'')+'"><label for="work-years">Стаж, полных лет</label><input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="'+esc(p.years??'')+'"><label for="work-areas">Где работаете</label><input id="work-areas" name="areas" maxlength="240" placeholder="Города и районы через запятую" value="'+esc(p.areas||'')+'"><label for="work-about">О себе</label><textarea id="work-about" name="about" maxlength="1500" placeholder="Опыт и виды работ">'+esc(p.about||'')+'</textarea></div></details><button class="primary wide">Сохранить профиль</button></form>','worker');
 }
 function myBid(t,p){return (t.bids||[]).find(b=>b.id===p.id)}
-function feedPost(t,p){
-  const own=p && myBid(t,p);
-  const files=(t.files||[]).filter(f=>f instanceof Blob).map(f=>({url:objectURL(f),name:f.name,image:f.type.startsWith('image/')}));
+const marketCategories=[
+  ['Фундамент','site','Фундамент'], ['Строительство дома','house','Строительство'],
+  ['Кровля','roof','Кровля'], ['Отделочные работы','room','Отделка'], ['Электромонтаж',null,'Электрика']
+];
+const savedTab='Сохранённые';
+const savedTenders=()=>new Set(readLocal('belkhi-saved-tenders',[]));
+const detailRoute=(t,p)=>'#'+(myBid(t,p)?'sent/':'apply/')+encodeURIComponent(t.id);
+function tenderMedia(t){
+  const files=(t.files||[]).filter(isStoredFile).map(file=>({
+    url:objectURL(file),name:file.name,image:file.type.startsWith('image/')
+  }));
   if(t.photo)files.unshift({url:'media/'+encodeURIComponent(t.photo)+'.jpg',name:'Фото объекта',image:true});
-  if(t.id==='demo-3' && t.description?.includes('10 × 8'))files.push({url:'media/foundation-plan.svg',name:'Схема основания',image:true});
-  const media=files.map((f,i)=>`<a class="feed-slide" href="${esc(f.url)}" target="_blank" rel="noopener" aria-label="Открыть: ${esc(f.name)}">
-    ${f.image?'<img loading="lazy" src="'+esc(f.url)+'" alt="'+esc(f.name)+'">':'<strong>Открыть PDF</strong>'}
-    <span>${i+1}/${files.length} · ${esc(f.name)}</span></a>`).join('');
-  return `<article class="feed-post"><div class="post-heading"><strong>${esc(t.kind)}</strong><small>${esc(t.district)}</small></div>
-    <div class="feed-cover feed-gallery">${media||'<span class="no-cover">Фото пока нет</span>'}</div>
-    <div class="post-caption"><dl class="post-spec"><div><dt>Бюджет</dt><dd>${money(t.budget)}</dd></div><div><dt>Срок работ</dt><dd>${esc(t.period)}</dd></div></dl>
-    <p>${esc(t.description||'')}</p></div><div class="feed-actions"><small>${t.demo?'Демо · ':''}Откликов: ${bids(t).length}</small>
-    ${link((own?'sent/':'apply/')+t.id,own?'Мой отклик':'Оставить отклик','btn primary')}</div></article>`;
+  if(t.id==='demo-3' && t.description?.includes('10 × 8')){
+    files.push({url:'media/foundation-plan.svg',name:'Схема основания',image:true});
+  }
+  return files;
+}
+function feedPost(t,p,saved){
+  const target=detailRoute(t,p), own=myBid(t,p);
+  const files=tenderMedia(t);
+  const media=files.map((file,index)=>`<a class="feed-slide" href="${esc(target)}" data-view-key="${esc(t.id+'/'+index)}" aria-label="${esc(t.kind+' · '+file.name)}">
+    ${file.image?'<img loading="lazy" src="'+esc(file.url)+'" alt="'+esc(file.name)+'">':'<strong>Документ заказчика</strong>'}
+    ${files.length>1?'<span class="media-position">'+(index+1)+' / '+files.length+'</span>':''}</a>`).join('');
+  return `<article class="feed-post">
+    <div class="post-heading"><span class="feed-subject-icon">${icon('tools')}</span><div><a href="${esc(target)}"><strong>${esc(t.kind)}</strong></a><small>${esc(t.district)}${t.demo?' · Демо':''}${t.winner!=null?' · Закрыт':''}</small></div></div>
+    ${media?'<div class="feed-cover feed-gallery" data-gallery="'+esc(t.id)+'">'+media+'</div>':''}
+    <div class="feed-caption">
+      <div class="feed-toolbar"><a href="${esc(target)}" class="feed-details-link">${own?'Мой отклик':'Открыть тендер'} ${icon('arrow')}</a>
+      <button class="workspace-icon bookmark" type="button" data-save-tender="${esc(t.id)}" aria-label="Сохранить тендер" aria-pressed="${saved}">${icon('bookmark')}</button></div>
+      <dl class="post-spec"><div><dt>Бюджет</dt><dd>${money(t.budget)}</dd></div><div><dt>Срок</dt><dd>${esc(t.period)}</dd></div><div><dt>Отклики</dt><dd>${bids(t).length}</dd></div></dl>
+      ${t.description?'<p>'+esc(t.description)+'</p>':''}
+    </div></article>`;
+}
+function marketTile(t,p){
+  const cover=tenderMedia(t).find(file=>file.image);
+  return `<a class="market-tile" href="${esc(detailRoute(t,p))}"><span class="market-tile-media">
+    ${cover?'<img loading="lazy" src="'+esc(cover.url)+'" alt="">':icon('tools')}
+    ${t.demo?'<small>Демо</small>':''}</span>
+    <strong>${esc(t.kind)}</strong><span>${esc(t.district)}</span><b>${money(t.budget)}</b></a>`;
 }
 function tenderRow(t, target, status, ownerVisible=false){
-  const attachment=t.files?.find(f=>f instanceof Blob && f.type.startsWith('image/'));
+  const attachment=t.files?.find(f=>isStoredFile(f) && f.type.startsWith('image/'));
   const thumb=attachment?'<img src="'+objectURL(attachment)+'" alt="">':t.photo?img(t.photo,''):'<span class="tender-placeholder" aria-hidden="true">⌂</span>';
   return '<a class="tender-card" href="#'+esc(target)+'">'+thumb+'<div class="tender-details"><strong>'+esc(t.kind)+'</strong><span class="meta">'+esc(t.district)+' · '+esc(t.period)+'</span><div class="tender-price"><b>'+money(t.budget)+'</b><span class="tag">'+esc(status)+'</span></div>'+(ownerVisible?customerBadge(t):'')+'</div></a>';
 }
 function market(tenders,p,params){
-  const filter=params.get('tab')||(p.skills.length?'По специальности':'Все');
-  const relevant=tenders.filter(t=>!t.manual&&(filter==='Мои отклики'?myBid(t,p):t.winner==null&&(t.demo||t.owner)&&t.parentOwner!==p.id&&(filter==='Все'||p.skills.includes(t.kind)))).sort((a,b)=>b.created-a.created);
-  const choices=key=>[...new Set(relevant.map(t=>t[key]).filter(Boolean))].sort();
+  const grid=params.get('view')==='grid';
+  const filter=params.get('tab')||(p.skills.length&&!grid?'По специальности':'Все');
+  const saved=savedTenders();
+  const available=tenders.filter(t=>!t.manual && (myBid(t,p) || ((t.demo||t.owner) && t.parentOwner!==p.id)));
+  const relevant=available.filter(t=>{
+    if(filter==='Мои отклики')return myBid(t,p);
+    if(filter===savedTab)return saved.has(t.id);
+    return t.winner==null && (filter==='Все' || p.skills.includes(t.kind));
+  }).sort((a,b)=>b.created-a.created);
+  const choices=key=>[...new Set(available.map(t=>t[key]).filter(Boolean))].sort();
   const filters=`<form id="feed-filter">
-    <input type="search" name="query" id="tender-search" aria-label="Поиск объектов" placeholder="Поиск по объектам">
-    <button type="button" id="filter-open" aria-haspopup="dialog">Фильтры</button>
+    <div class="market-search-field">${icon('search')}<input type="search" name="query" id="tender-search" aria-label="Поиск объектов" placeholder="Город, вид работ или объект"></div>
+    <button type="button" class="workspace-icon" id="filter-open" aria-haspopup="dialog" aria-label="Фильтры">${icon('filter')}<small hidden></small></button>
     <dialog id="market-panel" aria-labelledby="filter-title"><h3 id="filter-title">Фильтры</h3>
       <fieldset><legend>Города и районы</legend><div class="filter-cities">${choices('district').map(c=>'<label><input type="checkbox" name="city" value="'+esc(c)+'"> '+esc(c)+'</label>').join('')}</div></fieldset>
-      <label>Тип работ<select name="kind"><option value="">Все работы</option>${choices('kind').map(k=>'<option>'+esc(k)+'</option>').join('')}</select></label>
+      <label>Тип работ<select name="kind"><option value="">Все работы</option>${[...new Set([...kinds,...choices('kind')])].map(k=>'<option>'+esc(k)+'</option>').join('')}</select></label>
       <div class="pair"><label>Бюджет от, ₽<input name="min" type="number" min="0"></label><label>До, ₽<input name="max" type="number" min="0"></label></div>
       <div class="filter-actions"><button type="reset">Сбросить</button><button type="button" class="primary" id="filter-done">Готово</button></div>
     </dialog></form>`;
+  const categories='<div class="round-shortcuts market-categories" data-gallery="market-categories" aria-label="Виды работ">'+
+    marketCategories.map(([kind,photo,title])=>`<button type="button" data-kind="${kind}" aria-pressed="false">
+      <span class="shortcut-circle">${photo?img(photo):icon('tools')}</span><span>${title}</span></button>`).join('')+'</div>';
   const modes=[['Все','Все'],['По специальности','Подходящие'],['Мои отклики','Мои отклики']];
-  const switcher='<div class="market-modes">'+modes.map(([value,label])=>`<button data-tab="${value}" aria-pressed="${filter===value}">${label}</button>`).join('')+'</div>';
-  show(1,'Тендеры',filters+switcher+'<div id="results"></div>');
-  const search=document.querySelector('#tender-search');
-  const panel=document.querySelector('#market-panel');
-  const opener=document.querySelector('#filter-open');
-  opener.onclick=()=>panel.showModal();
-  document.querySelector('#filter-done').onclick=()=>panel.close();
-  function results(){
-    const q=search.value.trim().toLocaleLowerCase('ru');
-    const f=new FormData(search.form), cities=f.getAll("city");
-    const count=cities.length+['kind','min','max'].filter(key=>f.get(key)).length;
-    opener.textContent=count?'Фильтры · '+count:'Фильтры';
-    const visible=relevant.filter(t=>(!cities.length||cities.includes(t.district)) && (!f.get("kind")||t.kind===f.get("kind")) && (!f.get("min")||Number(t.budget)>=Number(f.get("min"))) && (!f.get("max")||Number(t.budget)<=Number(f.get("max"))) && [t.kind,t.district,t.description].join(' ').toLocaleLowerCase('ru').includes(q));
-    document.querySelector('#results').innerHTML=visible.map(t=>{
-      const own=myBid(t,p);
-      const status=!own?'Открыт':String(t.winner)===own.id?'Вас выбрали':t.winner!=null?'Тендер закрыт':'Отклик отправлен';
-      if(t.winner==null)return feedPost(t,p);
-      return tenderRow(t,(own?'sent/':'apply/')+t.id,status);
-    }).join('')||'<p class="muted">'+(filter==='Мои отклики'?'Здесь появятся отправленные предложения.':'Подходящих тендеров нет. Попробуйте вкладку «Все» или другой запрос.')+'</p>';
+  const switcher=filter===savedTab?'':'<div class="market-modes" aria-label="Лента тендеров">'+modes.map(([value,label])=>
+    `<button data-tab="${value}" aria-pressed="${filter===value}">${label}</button>`).join('')+'</div>';
+  const profileHint=!grid&&filter!==savedTab&&accountDestination()==='market'&&workerEnabled()&&!myProfile()
+    ? '<p class="market-profile-hint">Готовы откликаться? '+link('worker?edit=1','Заполнить профиль','back')+'</p>' : '';
+  show(1,filter===savedTab?savedTab:grid?'Поиск тендеров':'Тендеры',filters+categories+switcher+profileHint+
+    '<div id="results" class="'+(grid?'market-grid':'market-stream')+'"></div>');
+  screen.dataset.marketView=filter===savedTab?'saved':grid?'grid':'feed';
+  const form=screen.querySelector('#feed-filter');
+  const panel=form.querySelector('#market-panel');
+  const opener=form.querySelector('#filter-open');
+  const resultsNode=screen.querySelector('#results');
+  const chips=[...screen.querySelectorAll('[data-kind]')];
+  const restored=new FormData();
+  for(const [key,value] of workspaceState()?.filters||[])restored.append(key,value);
+  for(const control of form.querySelectorAll('[name]')){
+    if(control.type==='checkbox')control.checked=restored.getAll(control.name).includes(control.value);
+    else if(restored.has(control.name))control.value=restored.get(control.name);
   }
-  search.form.oninput=results;search.form.onreset=()=>queueMicrotask(results);search.form.onsubmit=e=>e.preventDefault();results();
+  opener.onclick=()=>panel.showModal();
+  form.querySelector('#filter-done').onclick=()=>panel.close();
+  function results(){
+    const values=new FormData(form);
+    const query=String(values.get('query')).trim().toLocaleLowerCase('ru');
+    const cities=values.getAll('city');
+    const kind=values.get('kind');
+    const count=cities.length+['kind','min','max'].filter(key=>values.get(key)).length;
+    opener.setAttribute('aria-label',count?'Фильтры, выбрано '+count:'Фильтры');
+    opener.querySelector('small').hidden=!count;
+    opener.querySelector('small').textContent=count;
+    for(const chip of chips)chip.setAttribute('aria-pressed',String(chip.dataset.kind===kind));
+    const visible=relevant.filter(t=>(filter!==savedTab||saved.has(t.id))&&
+      (!cities.length||cities.includes(t.district))&&(!kind||t.kind===kind)&&
+      (!values.get('min')||Number(t.budget)>=Number(values.get('min')))&&
+      (!values.get('max')||Number(t.budget)<=Number(values.get('max')))&&
+      [t.kind,t.district,t.description].join(' ').toLocaleLowerCase('ru').includes(query));
+    resultsNode.innerHTML=visible.map(t=>{
+      if(grid)return marketTile(t,p);
+      if(t.winner==null||filter===savedTab)return feedPost(t,p,saved.has(t.id));
+      const own=myBid(t,p);
+      const status=!own?'Тендер закрыт':String(t.winner)===own.id?'Вас выбрали':'Выбран другой исполнитель';
+      return tenderRow(t,detailRoute(t,p).slice(1),status);
+    }).join('')||'<p class="market-empty">'+(filter===savedTab&&!saved.size?'Здесь появятся тендеры, которые вы сохранили.':
+      filter==='Мои отклики'&&!relevant.length?'Здесь появятся ваши предложения по тендерам.':
+      'Тендеры не найдены. Попробуйте другой запрос или измените фильтры.')+'</p>';
+  }
+  for(const chip of chips)chip.onclick=()=>{
+    form.elements.kind.value=form.elements.kind.value===chip.dataset.kind?'':chip.dataset.kind;
+    results();
+  };
+  resultsNode.onclick=event=>{
+    const button=event.target.closest('[data-save-tender]');
+    if(!button)return;
+    const id=button.dataset.saveTender;
+    if(saved.has(id))saved.delete(id);else saved.add(id);
+    writeLocal('belkhi-saved-tenders',[...saved]);
+    if(filter===savedTab&&!saved.has(id)){results();screen.focus({preventScroll:true})}
+    else button.setAttribute('aria-pressed',String(saved.has(id)));
+  };
+  form.oninput=results;
+  form.onreset=()=>queueMicrotask(results);
+  form.onsubmit=event=>event.preventDefault();
+  results();
 }
 async function workerScreen(page,id,params,seq){
   const savedProfile=myProfile();
-  const p=savedProfile||{id:portfolioOwner(),name:'Исполнитель',skills:[]};
-  if(page==='worker'){if(params.has('edit'))editProfile(p||{});else await portfolio(p||{name:'Исполнитель'},p?.id||portfolioOwner(),true,portfolioUI,'',profileReturn||(p?'market':'list'));return}
-  if(page==='apply'&&!savedProfile){
-    show(null,'Заполните профиль для отклика','<p>Укажите имя, город и специальность, чтобы заказчик мог оценить ваше предложение.</p>'+link('worker?edit=1&tender='+encodeURIComponent(id),'Заполнить профиль','btn primary'),'market');return
+  const p=savedProfile||{id:portfolioOwner(),name:'Исполнитель',handle:currentIdentity()?.username,skills:[]};
+  if(page==='worker'){
+    if(!workerEnabled()){
+      const tender=params.get('tender');
+      replaceWorkspaceRoute('#activate-worker'+(tender&&/^[a-z0-9-]+$/i.test(tender)?'?tender='+tender:''));
+      await render();
+      return;
+    }
+    if(params.has('edit'))editProfile(savedProfile || {name: currentAuth()?.user?.user_metadata?.display_name});
+    else if(!savedProfile&&currentAuth()){
+      show(null,'Профиль исполнителя','<div class="worker-activation"><p>Заполните имя, город и специальность, чтобы отправлять отклики.</p>'+
+        link('worker?edit=1','Заполнить профиль','btn secondary')+'</div>','account');
+    }else await portfolio(p,p.id,true,portfolioUI,'',profileReturn||'market');
+    return;
   }
   if(page==='manual'){
     show(null,'Новый объект',`<form id="manual-project">
@@ -334,14 +491,16 @@ async function workerScreen(page,id,params,seq){
   current=t;
   if(page==='apply'&&(t.parentOwner===p.id||(!t.demo&&!t.manual&&!t.owner&&!t.parentId))){location.replace('#offers/'+t.id);return}
   if(page==='buyer'){location.replace('#works');return}
-  if(page==='crm'){if(t.winner!==p.id){location.replace('#works');return}crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel});
+  if(page==='crm'){if(t.winner!==p.id){location.replace('#works');return}crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel,objectURL});
     const children=(await records('readonly',s=>s.getAll())).filter(child=>child.parentId===t.id);
     if(seq!==generation)return;
     screen.insertAdjacentHTML('beforeend','<h3>Субподряд</h3>'+link('new?parent='+encodeURIComponent(t.id),'＋ Нанять на часть работ','btn secondary pill')+children.map(child=>tenderRow(child,(child.winner==null?'offers/':'project/')+child.id,child.winner==null?'Сравнить отклики · '+bids(child).length:'В работе')).join(''));return}
   const own=myBid(t,p);
+  const attachments=tenderMedia(t);
+  const cover=attachments.find(file=>file.image);
   const requestCard='<article class="apply-request">'+
-    (t.photo?'<div class="apply-cover">'+img(t.photo,t.kind)+'</div>':'')+
-    '<div class="apply-request-body"><div class="apply-request-head"><div><h2>'+esc(t.kind)+'</h2><span>'+esc(t.district)+'</span></div><span class="tag">Приём откликов</span></div>'+
+    (cover?'<div class="apply-cover"><img src="'+esc(cover.url)+'" alt="'+esc(cover.name)+'"></div>':'')+
+    '<div class="apply-request-body"><div class="apply-request-head"><div><h2>'+esc(t.kind)+'</h2><span>'+esc(t.district)+'</span></div><span class="tag">'+(t.winner==null?'Приём откликов':'Закрыт')+'</span></div>'+
     '<dl class="apply-facts"><div><dt>Бюджет заказчика</dt><dd>'+money(t.budget)+'</dd></div><div><dt>Желаемый срок</dt><dd>'+esc(t.period)+'</dd></div><div><dt>Откликов</dt><dd>'+bids(t).length+'</dd></div></dl>'+
     '<p class="apply-description">'+esc(t.description||'Описание работ не указано.')+'</p></div></article>';
   const intro=requestCard;
@@ -350,10 +509,19 @@ async function workerScreen(page,id,params,seq){
     show(3,status,intro+'<h3>Ваше предложение</h3><b class="amount">'+money(own.price)+'</b> · '+esc(own.period)+'<p>'+esc(own.terms)+'</p>'+(String(t.winner)===p.id?link('crm/'+t.id,'Открыть объект в CRM','btn primary'):'')+projectCrew(t,p)+link('market?tab='+encodeURIComponent('Мои отклики'),'Мои отклики','btn secondary'),'market');return
   }
   if(t.winner!=null){show(2,'Тендер закрыт',intro+'<p>Заказчик уже выбрал исполнителя.</p>','market');return}
-  const files=(t.files||[]).map(f=>'<a class="project" download="'+esc(f.name)+'" href="'+objectURL(f)+'">'+esc(f.name)+' ↓</a>').join('');
+  const materials=attachments.length>1||attachments.some(file=>!file.image)
+    ? '<details class="fold apply-files"><summary>Материалы заказчика</summary><div>'+
+      attachments.map(file=>'<a class="project" href="'+esc(file.url)+'" target="_blank" rel="noopener">'+esc(file.name)+'</a>').join('')+'</div></details>'
+    : '';
+  if(!savedProfile){
+    const enabled=workerEnabled();
+    show(2,'Тендер',requestCard+materials+'<div class="tender-next"><p>Для отклика понадобится профиль исполнителя.</p>'+
+      link((enabled?'worker?edit=1&tender=':'activate-worker?tender=')+encodeURIComponent(id),
+        enabled?'Заполнить профиль':'Стать исполнителем','btn primary')+'</div>','market');
+    return;
+  }
   const performer='<div class="bid-profile">'+avatar(p)+'<div><small>Отклик от</small><strong>'+esc(p.name)+'</strong><span>'+esc([p.type,p.city].filter(Boolean).join(' · '))+'</span></div>'+link('worker?edit=1','Изменить профиль','btn secondary')+'</div>';
-  show(2,'Отклик на заявку',requestCard+
-    (files?'<details class="fold apply-files"><summary>Материалы заказчика <small>'+(t.files||[]).length+' файлов</small></summary><div>'+files+'</div></details>':'')+
+  show(2,'Отклик на заявку',requestCard+materials+
     performer+'<section class="bid-compose"><div class="bid-compose-head"><h3>Ваше предложение</h3><span>Заказчик увидит цену, срок и комментарий</span></div>'+
     '<form id="bid-form"><div class="bid-fields"><label for="bid-price">Стоимость работ, ₽<input id="bid-price" name="price" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="Например, '+Math.round(Number(t.budget)*.9).toLocaleString('ru-RU')+'"></label>'+
     '<label for="bid-period">Срок выполнения<input id="bid-period" name="period" list="period-options" required maxlength="80" placeholder="Например, 3 недели"><datalist id="period-options"><option value="До 2 недель"><option value="3 недели"><option value="1 месяц"><option value="1–2 месяца"></datalist></label></div>'+
@@ -368,11 +536,14 @@ document.addEventListener('submit',async event=>{
   const submit=form.querySelector('button.primary');submit.disabled=true;
   try{
     if(form.id==='worker-profile'){
+      if(!workerEnabled())return;
       const skills=data.getAll('skills');
       if(!skills.length||!value('name')||!value('city'))throw Error('Укажите имя, город и хотя бы одну специальность.');
-      localStorage.setItem(profileKey,JSON.stringify({id:myProfile()?.id||portfolioOwner(),name:value('name'),city:value('city'),years:value('years'),areas:value('areas'),about:value('about'),type:value('type'),skills}));
+      accountStorage.setItem(profileKey,JSON.stringify({id:myProfile()?.id||portfolioOwner(),name:value('name'),city:value('city'),years:value('years'),areas:value('areas'),about:value('about'),type:value('type'),skills}));
       const tender=route().params.get('tender');
-      location.hash=tender?'apply/'+encodeURIComponent(tender):'worker';return
+      const target=tender&&/^[a-z0-9-]+$/i.test(tender)?'#apply/'+tender:'#worker';
+      if(!finishWorkspaceEdit(target))await render();
+      return
     }
     const id=current.id, p=myProfile(), period=value('period'),price=Number(value('price'));
     if(!p||!period||!Number.isSafeInteger(price)||price<=0||price>100000000000)throw Error('Проверьте цену и срок выполнения.');
@@ -391,22 +562,64 @@ document.addEventListener('submit',async event=>{
   }catch(error){notice(error.message)}finally{submit.disabled=false}
 });
 
-const readLocal=(key,fallback)=>JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback));
-const writeLocal=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
-const portfolioUI={show,esc,link,objectURL,notice,render};
+const readLocal=(key,fallback)=>JSON.parse(accountStorage.getItem(key)||JSON.stringify(fallback));
+const writeLocal=(key,value)=>accountStorage.setItem(key,JSON.stringify(value));
+const portfolioUI={show,esc,link,objectURL,notice,render,showSamples:demoMode()};
 function route(){
   const [path,query]=location.hash.slice(1).split('?');const [page,id,index]=path.split('/');
-  return {page:page||'new',id,index,params:new URLSearchParams(query)};
+  return {page:page||(currentAuth()?accountDestination():demoMode()?'market':'login'),id,index,params:new URLSearchParams(query)};
 }
+let seeded;
+const accountUI={show,notice,esc,link,workerEnabled,activeProfile,render};
 async function render(){
   const seq=++generation;const {page,id,index,params}=route();
-  dialog.close();notice('');urls.forEach(URL.revokeObjectURL);urls=[];current=null;
+  dialog.close();notice('');urls.forEach(URL.revokeObjectURL);urls=[];fileUrls=new WeakMap();current=null;
+  const auth=currentAuth();
+  const isRegistration=registrationPages.includes(page);
+  const isSettings=['account','activate-worker'].includes(page);
+  const isAccountPage=isRegistration||['login','start'].includes(page)||isSettings;
+  document.body.dataset.surface = page==='admin' ? 'admin' : page==='catalog' ? 'catalog'
+    : isAccountPage&&!isSettings&&!(page==='start'&&auth?.user?.user_metadata?.belkhi_starting_mode) ? 'account' : 'app';
   try{
+    const pending=registrationStep();
+    if(pending && page!==pending){location.replace('#'+pending);return}
+    if(isRegistration){
+      const guestStep=['signup','signup-confirm'].includes(page);
+      if((auth && !pending) || (!auth && !guestStep)){
+        location.replace('#'+(auth?accountDestination():'signup'));return;
+      }
+      registrationScreen(page,accountUI,authError);
+      return;
+    }
+    if(page==='admin'){
+      if(!auth){accountScreen('admin',accountUI,authError);return}
+      if(!isOwner()){
+        show(null,'Администрирование','<p>У этого аккаунта нет прав администратора.</p>'+link('account','Настройки аккаунта','btn'));
+        return;
+      }
+      if(params.has('section')){
+        await catalog(true,params.get('section'),{show,notice,render,sync:()=>seed(records)});
+        return;
+      }
+      await moderation(id,params,accountUI,()=>seq===generation);
+      return;
+    }
+    if(page==='catalog'){await catalog(false,params.get('section'),{show,notice,render});return}
+    if(!auth && (!demoMode() || isSettings || page==='start') && !['login','signup'].includes(page)){
+      location.replace('#login');return;
+    }
+    if(auth && page==='login'){location.replace('#'+accountDestination());return}
+    if(auth && !isAccountPage && accountDestination()==='start'){location.replace('#start');return}
+    if(isAccountPage){accountScreen(page,accountUI,authError);return}
+    if(!seeded)seeded=seed(records).catch(()=>{seeded=null});
+    if(page==='market' || page==='apply')await seeded;
+    if(seq!==generation)return;
     if(workerPages.includes(page)){await workerScreen(page,id,params,seq);return}
-    document.querySelector('#bottom-nav').hidden=false;
-    if(page==='admin'||page==='catalog'){await catalog(page==='admin',params.get('section'),{show,notice,render,sync:()=>seed(records)});return}
     if(page==='customer'){
-      location.replace('#worker'+(params.has('edit')?'?edit=1':''));return
+      if(!auth){location.replace('#worker'+(params.has('edit')?'?edit=1':''));return}
+      if(params.has('edit'))editCustomerProfile();
+      else customerProfile();
+      return;
     }
     if(page==='inbox'){location.replace('#list');return}
     if(page==='new'){
@@ -456,14 +669,37 @@ document.addEventListener('submit',async e=>{
   const parentId=route().params.get('parent');
   const parent=parentId?await records('readonly',s=>s.get(parentId)):null;
   if(parentId&&parent?.winner!==myProfile()?.id){notice('Объект недоступен');btn.disabled=false;return}
-  const t={...values,...(parent?{parentId,parentOwner:myProfile().id,requester:{...myProfile()}}:{}),budget:Number(values.budget),created:Date.now(),id:crypto.randomUUID(),files:selectedFiles,winner:null};
-  try{await records('readwrite',s=>s.add(t));draft={};selectedFiles=[];channel.postMessage(t.id);location.hash='offers/'+t.id}catch(e){notice(e.message);btn.disabled=false}
+  try {
+    const files=await Promise.all(selectedFiles.map(packFile));
+    const t={...values,...(parent?{parentId,parentOwner:myProfile().id,requester:{...myProfile()}}:{}),
+      budget:Number(values.budget),created:Date.now(),id:crypto.randomUUID(),files,winner:null};
+    await records('readwrite',s=>s.add(t));
+    draft={};selectedFiles=[];channel.postMessage(t.id);location.hash='offers/'+t.id;
+  } catch(error) {
+    notice(error.message);
+    btn.disabled=false;
+  }
 });
 document.addEventListener('click',async e=>{
   const a=e.target.closest('a,button');if(!a)return;
   if(a.dataset.remove!==undefined){selectedFiles.splice(Number(a.dataset.remove),1);fileList();return}
-  if(a.dataset.tab){const r=route();r.params.set('tab',a.dataset.tab);history.replaceState(null,'',location.hash.split('?')[0]+'?'+r.params);await render();screen.querySelector('[aria-pressed=true]')?.focus();return}
-  if(a.hash?.startsWith('#profile/')&&route().params.get('tab'))a.hash+='?from='+encodeURIComponent(route().params.get('tab'));
+  if(a.dataset.tab){
+    const r=route();r.params.set('tab',a.dataset.tab);
+    replaceWorkspaceParams(r.params,r.page==='market');
+    const here=location.hash;
+    await render();
+    if(location.hash===here){
+      const selected=[...screen.querySelectorAll('[data-tab]')].find(button=>button.dataset.tab===a.dataset.tab);
+      selected?.focus({preventScroll:true});
+    }
+    return;
+  }
+  if(document.body.dataset.surface==='app' && a.tagName==='A'){
+    if(a.hash?.startsWith('#profile/')&&route().params.get('tab')&&!a.hash.includes('?')){
+      a.hash+='?from='+encodeURIComponent(route().params.get('tab'));
+    }
+    openWorkspaceLink(e,a);
+  }
   if(a.dataset.choose!==undefined&&current){
     const i=a.dataset.choose,p=bidById(current,i);
     dialog.innerHTML='<h2>Выбрать исполнителя?</h2><p>'+esc(p.name)+'</p><div class="summary"><b>'+money(p.price)+'</b> · '+esc(p.period)+'<br>'+esc(p.terms)+'</div><p>После подтверждения тендер перейдёт в работу.</p><div class="actions"><button data-cancel>Вернуться</button><button class="primary" data-confirm="'+i+'">Подтвердить выбор</button></div>';dialog.showModal();
@@ -474,7 +710,19 @@ document.addEventListener('click',async e=>{
     try{await records('readwrite',s=>{const req=s.get(id);req.onsuccess=()=>{if(req.result&&req.result.winner==null)s.put({...req.result,winner})};return req});channel.postMessage(id);dialog.close();location.hash='project/'+id}catch(e){dialog.close();notice(e.message)}
   }
 });
-window.addEventListener('hashchange',async event=>{if(route().page==='worker'){const prior=new URL(event.oldURL).hash.slice(1);if(!prior.startsWith('worker'))profileReturn=(!myProfile()&&workerPages.includes(prior.split(/[/?]/)[0]))?'list':prior}await render();screen.focus({preventScroll:true});window.scrollTo(0,0)});
-await seed(records);
-if(!location.hash){try{const existing=await records('readonly',s=>s.count());history.replaceState(null,'',existing?'#list':'#new')}catch{}}
+window.addEventListener('hashchange',async event=>{
+  const here=location.hash;
+  if(route().page==='worker'){
+    const prior=new URL(event.oldURL).hash.slice(1);
+    if(!prior.startsWith('worker'))profileReturn=(!myProfile()&&workerPages.includes(prior.split(/[/?]/)[0]))?'list':prior;
+  }
+  await render();
+  if(location.hash!==here)return;
+  if((document.body.dataset.surface==='app'||route().page==='start') && restoreWorkspace())return;
+  screen.focus({preventScroll:true});window.scrollTo(0,0);
+  screen.querySelector('[data-current-publication]')?.scrollIntoView({block:'start'});
+});
 await render();
+if(document.body.dataset.surface==='app' && !restoreWorkspace()){
+  screen.querySelector('[data-current-publication]')?.scrollIntoView({block:'start'});
+}
