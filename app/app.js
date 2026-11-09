@@ -131,11 +131,12 @@ function editCustomerProfile(){
   show(null,'Редактировать профиль','<form id="customer-form" class="customer-settings">'+
     '<section><h3>Основные сведения</h3><label for="customer-name">Имя или название<input id="customer-name" name="name" required maxlength="90" value="'+esc(p.name||'')+'" placeholder="Например, Ахмед или СК Монолит"></label>'+
     '<div class="settings-pair"><label for="customer-type">Тип профиля<select id="customer-type" name="type"><option '+(p.type==='Частный заказчик'?'selected':'')+'>Частный заказчик</option><option '+(p.type==='Компания-заказчик'?'selected':'')+'>Компания-заказчик</option></select></label>'+
-    '<label for="customer-city">Город<input id="customer-city" name="city" maxlength="100" value="'+esc(p.city||'')+'" placeholder="Грозный"></label></div>'+
+    placeField('customer-city','city','Город',p.city)+'</div>'+
     '<label for="customer-handle">Ник профиля<span class="handle-field"><b>@</b><input id="customer-handle" name="handle" required maxlength="30" pattern="[A-Za-z0-9._]{3,30}" '+(username?'readonly ':'')+'value="'+esc(handle)+'"></span><small>'+(username?'@логин аккаунта':'Латиница, цифры, точка или подчёркивание')+'</small></label></section>'+
     '<section><h3>О себе</h3><label for="customer-about">Короткое описание<textarea id="customer-about" name="about" maxlength="500" rows="3" placeholder="Расскажите, какие объекты вы строите и что для вас важно">'+esc(p.about||'')+'</textarea></label></section>'+
     '<div class="privacy-note"><strong>Ваши данные защищены</strong><span>До выбора исполнителя участники тендера не видят имя, профиль и контакты заказчика.</span></div>'+
     '<button class="primary wide">Сохранить изменения</button></form>','customer');
+  bindPlacePicker(document.querySelector('#customer-city-picker'));
 }
 document.addEventListener('submit',async e=>{
   const id=e.target.id;
@@ -206,13 +207,14 @@ function form(){
     </section>
     <label for="kind">Тип работ<select id="kind" name="kind">${options(kinds,draft.kind)}</select></label>
     <label for="description">Описание проекта<textarea id="description" name="description" maxlength="3000" required placeholder="Например, нужны фундамент, коробка и кровля.">${esc(draft.description||'')}</textarea></label>
-    <label for="district">Город или район<input id="district" name="district" required maxlength="100" value="${esc(draft.district||'')}" placeholder="Например, Истринский район"></label>
+    ${placeField('district','district','Город или район',draft.district,true)}
     <div class="pair">
       <label for="budget">Бюджет, ₽<input id="budget" name="budget" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="3 000 000" value="${esc(draft.budget||'')}"></label>
       <label for="period">Срок выполнения<select id="period" name="period">${options(durations,draft.period||'3–5 месяцев')}</select></label>
     </div>
     <button class="primary wide">Создать тендер</button><p class="caption">Тендер сохранится на этом устройстве. Для сравнения появятся демонстрационные отклики.</p>
   </form>`,'list');
+  bindPlacePicker(document.querySelector('#district-picker'));
   fileList();
 }
 function fileList(){
@@ -279,7 +281,7 @@ function workerEnabled(){
   const data=auth?.user?.user_metadata;
   return !auth || data?.belkhi_worker_enabled===true || data?.belkhi_starting_mode==='worker' || Boolean(myProfile());
 }
-const workerPlaces=[
+const servicePlaces=[
   'Грозный','Гудермес','Аргун','Шали','Урус-Мартан','Ачхой-Мартан','Курчалой',
   'Грозненский район','Гудермесский район','Ачхой-Мартановский район','Веденский район',
   'Итум-Калинский район','Курчалоевский район','Надтеречный район','Наурский район',
@@ -288,6 +290,61 @@ const workerPlaces=[
 ];
 const searchKey=value=>value.trim().toLocaleLowerCase('ru').replaceAll('ё','е');
 const uniqueSkills=skills=>[...new Map(skills.filter(Boolean).map(skill=>[searchKey(skill),skill])).values()];
+
+function placeField(id,name,label,value='',required=false){
+  return `<div id="${id}-picker" class="worker-picker place-field">
+    <label for="${id}">${label}</label>
+    <div class="worker-search">${icon('search')}<input id="${id}" name="${name}" type="search"
+      maxlength="100" autocomplete="off" placeholder="Найти город или район"
+      aria-controls="${id}-results" value="${esc(value)}" ${required?'required':''}></div>
+    <div id="${id}-results" class="worker-suggestions" hidden></div>
+    <p class="worker-picker-note" role="status"></p>
+  </div>`;
+}
+
+function bindPlacePicker(picker,{excluded=()=>[],select}={}){
+  const input=picker.querySelector('input[type="search"]');
+  const results=picker.querySelector('.worker-suggestions');
+  const note=picker.querySelector('.worker-picker-note');
+  const suggest=()=>{
+    const query=searchKey(input.value);
+    const chosen=new Set(excluded().map(searchKey));
+    const options=query?servicePlaces.filter(place=>searchKey(place).startsWith(query)&&!chosen.has(searchKey(place))).slice(0,6):[];
+    results.innerHTML=options.map(place=>'<button type="button" data-place="'+esc(place)+'">'+esc(place)+'</button>').join('');
+    results.hidden=!options.length;
+    note.textContent=query&&!options.length?(select?'Нет новых совпадений. Попробуйте другое название.':'В списке нет совпадений. Можно оставить введённое название.'):'';
+  };
+  input.oninput=input.onfocus=suggest;
+  picker.addEventListener('focusout',event=>{
+    if(!picker.contains(event.relatedTarget))results.hidden=true;
+  });
+  picker.onkeydown=event=>{
+    if(event.key==='Escape'&&!results.hidden){
+      event.preventDefault();
+      input.focus();
+      results.hidden=true;
+    }
+    if(event.target!==input||results.hidden||!['ArrowDown','Enter'].includes(event.key))return;
+    event.preventDefault();
+    const buttons=results.querySelectorAll('button');
+    if(event.key==='Enter'&&buttons.length===1)buttons[0].click();
+    else buttons[0]?.focus();
+  };
+  results.onclick=event=>{
+    const option=event.target.closest('[data-place]');
+    if(!option)return;
+    const place=option.dataset.place;
+    if(select){
+      if(select(place)===false)return;
+    }else{
+      input.value=place;
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+    input.focus();
+    results.hidden=true;
+    note.textContent='';
+  };
+}
 
 function bindWorkerPickers(){
   const bindTags=(picker,field,read,serialize)=>{
@@ -314,39 +371,18 @@ function bindWorkerPickers(){
   };
   const geo=document.querySelector('#worker-area-picker');
   const areas=bindTags(geo,'areas',value=>value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean),items=>items.join(', '));
-  const results=geo.querySelector('#worker-area-results');
-  const matches=()=>{
-    const query=searchKey(areas.input.value);
-    const chosen=new Set(areas.selected.map(searchKey));
-    return query?workerPlaces.filter(place=>searchKey(place).startsWith(query)&&!chosen.has(searchKey(place))).slice(0,6):[];
-  };
-  const suggest=()=>{
-    const options=matches();
-    results.innerHTML=options.map(place=>'<button type="button" data-place="'+esc(place)+'">'+esc(place)+'</button>').join('');
-    results.hidden=!options.length;
-    areas.note.textContent=areas.input.value.trim()&&!options.length?'Нет новых совпадений. Попробуйте другое название.':'';
-  };
-  areas.input.oninput=areas.input.onfocus=suggest;
-  geo.onfocusout=event=>{if(!geo.contains(event.relatedTarget))results.hidden=true};
-  geo.onkeydown=event=>{
-    if(event.key==='Escape'){results.hidden=true;areas.input.focus();results.hidden=true}
-    if(event.target!==areas.input||!['ArrowDown','Enter'].includes(event.key)||!areas.input.value.trim())return;
-    event.preventDefault();
-    const buttons=[...results.querySelectorAll('button')];
-    if(event.key==='Enter'&&buttons.length===1)buttons[0].click();
-    else if(buttons.length){results.hidden=false;buttons[0].focus()}
-  };
-  results.onclick=event=>{
-    const option=event.target.closest('[data-place]');
-    if(!option)return;
-    const next=[...areas.selected,option.dataset.place];
-    if(next.join(', ').length>240){areas.note.textContent='Список мест слишком длинный. Уберите одно из выбранных.';return}
-    areas.selected.push(option.dataset.place);
-    areas.input.value='';
-    areas.paint();
-    areas.input.focus();
-    suggest();
-  };
+  bindPlacePicker(geo,{
+    excluded:()=>areas.selected,
+    select(place){
+      if([...areas.selected,place].join(', ').length>240){
+        areas.note.textContent='Список мест слишком длинный. Уберите одно из выбранных.';
+        return false;
+      }
+      areas.selected.push(place);
+      areas.input.value='';
+      areas.paint();
+    }
+  });
 
   const custom=document.querySelector('#worker-skill-picker');
   const skills=bindTags(custom,'custom_skills',JSON.parse,JSON.stringify);
@@ -393,7 +429,7 @@ function editProfile(p={}){
     <section aria-labelledby="work-location">
       <h2 id="work-location">География и стаж</h2>
       <div class="worker-editor-pair">
-        <label>Город<input id="work-city" name="city" required maxlength="100" value="${esc(p.city||'')}"></label>
+        ${placeField('work-city','city','Город',p.city,true)}
         <label>Стаж, лет<input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="${esc(p.years??'')}"></label>
       </div>
       <div id="worker-area-picker" class="worker-picker">
@@ -418,6 +454,7 @@ function editProfile(p={}){
     </fieldset>
     <button class="primary wide">Сохранить профиль</button>
   </form>`,'worker');
+  bindPlacePicker(document.querySelector('#work-city-picker'));
   bindWorkerPickers();
 }
 function myBid(t,p){return (t.bids||[]).find(b=>b.id===p.id)}
@@ -571,13 +608,14 @@ async function workerScreen(page,id,params,seq){
     show(null,'Новый объект',`<form id="manual-project">
       <p class="form-note">Свой заказ в разделе «Работы». Этапы добавите после создания.</p>
       <label>Название объекта<input name="kind" placeholder="Например, дом из кирпича" required maxlength="100"></label>
-      <label>Город или район<input name="district" placeholder="Грозный" required maxlength="100"></label>
+      ${placeField('manual-district','district','Город или район','',true)}
       <div class="project-terms">
         <label>Бюджет, ₽<input type="number" inputmode="numeric" name="budget" min="1" placeholder="350 000" required></label>
         <label>Срок работ<input name="period" placeholder="3 недели" required maxlength="80"></label>
       </div>
       <button class="primary" type="submit">Создать объект</button>
     </form>`,'works');
+    bindPlacePicker(document.querySelector('#manual-district-picker'));
     document.querySelector('#manual-project').onsubmit=async e=>{
       e.preventDefault();const f=e.target,b=e.submitter||f.querySelector('button[type=submit]');b.disabled=true;
       try{const data=Object.fromEntries(new FormData(f)),id=crypto.randomUUID();

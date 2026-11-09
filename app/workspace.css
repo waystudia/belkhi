@@ -548,7 +548,9 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
 .worker-picker { display: grid; gap: 5px; min-width: 0; }
 .worker-search { position: relative; }
 .worker-search .ui-icon { position: absolute; left: 10px; top: 13px; color: var(--muted); pointer-events: none; }
-#worker-profile .worker-search input { padding-left: 34px; }
+#worker-profile .worker-search input, .place-field .worker-search input { padding-left: 34px; }
+.place-field > label { margin: 0; }
+.place-field .worker-search input { width: 100%; margin: 0; }
 .worker-suggestions {
   display: grid;
   border: 1px solid var(--line);
