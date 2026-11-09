@@ -9,7 +9,7 @@ import {accountKey, accountStorage, initializeAccountStorage} from './account-st
 import {moderation} from './moderation.js';
 import {icon} from './icons.js?v=20261109-2';
 import {isStoredFile, packFile, unpackFile} from './file-storage.js';
-import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js?v=20261109-1';
+import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js?v=20261109-2';
 
 let authError;
 try { await restoreAuth(); }
@@ -279,9 +279,103 @@ function workerEnabled(){
   const data=auth?.user?.user_metadata;
   return !auth || data?.belkhi_worker_enabled===true || data?.belkhi_starting_mode==='worker' || Boolean(myProfile());
 }
+const workerPlaces=[
+  'Грозный','Гудермес','Аргун','Шали','Урус-Мартан','Ачхой-Мартан','Курчалой',
+  'Грозненский район','Гудермесский район','Ачхой-Мартановский район','Веденский район',
+  'Итум-Калинский район','Курчалоевский район','Надтеречный район','Наурский район',
+  'Ножай-Юртовский район','Серноводский район','Урус-Мартановский район','Шалинский район',
+  'Шаройский район','Шатойский район','Шелковской район'
+];
+const searchKey=value=>value.trim().toLocaleLowerCase('ru').replaceAll('ё','е');
+const uniqueSkills=skills=>[...new Map(skills.filter(Boolean).map(skill=>[searchKey(skill),skill])).values()];
+
+function bindWorkerPickers(){
+  const bindTags=(picker,field,read,serialize)=>{
+    const input=picker.querySelector('input:not([type="hidden"])');
+    const stored=picker.querySelector('input[name="'+field+'"]');
+    const tags=picker.querySelector('.worker-picked');
+    const note=picker.querySelector('.worker-picker-note');
+    const selected=read(stored.value);
+    const paint=()=>{
+      stored.value=serialize(selected);
+      tags.innerHTML=selected.map((item,index)=>'<button type="button" data-remove-tag="'+index+
+        '" aria-label="Убрать '+esc(item)+'">'+esc(item)+' <span aria-hidden="true">×</span></button>').join('');
+    };
+    tags.onclick=event=>{
+      const button=event.target.closest('[data-remove-tag]');
+      if(!button)return;
+      selected.splice(Number(button.dataset.removeTag),1);
+      note.textContent='';
+      paint();
+      input.focus();
+    };
+    paint();
+    return {input,selected,note,paint};
+  };
+  const geo=document.querySelector('#worker-area-picker');
+  const areas=bindTags(geo,'areas',value=>value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean),items=>items.join(', '));
+  const results=geo.querySelector('#worker-area-results');
+  const matches=()=>{
+    const query=searchKey(areas.input.value);
+    const chosen=new Set(areas.selected.map(searchKey));
+    return query?workerPlaces.filter(place=>searchKey(place).startsWith(query)&&!chosen.has(searchKey(place))).slice(0,6):[];
+  };
+  const suggest=()=>{
+    const options=matches();
+    results.innerHTML=options.map(place=>'<button type="button" data-place="'+esc(place)+'">'+esc(place)+'</button>').join('');
+    results.hidden=!options.length;
+    areas.note.textContent=areas.input.value.trim()&&!options.length?'Нет новых совпадений. Попробуйте другое название.':'';
+  };
+  areas.input.oninput=areas.input.onfocus=suggest;
+  geo.onfocusout=event=>{if(!geo.contains(event.relatedTarget))results.hidden=true};
+  geo.onkeydown=event=>{
+    if(event.key==='Escape'){results.hidden=true;areas.input.focus();results.hidden=true}
+    if(event.target!==areas.input||!['ArrowDown','Enter'].includes(event.key)||!areas.input.value.trim())return;
+    event.preventDefault();
+    const buttons=[...results.querySelectorAll('button')];
+    if(event.key==='Enter'&&buttons.length===1)buttons[0].click();
+    else if(buttons.length){results.hidden=false;buttons[0].focus()}
+  };
+  results.onclick=event=>{
+    const option=event.target.closest('[data-place]');
+    if(!option)return;
+    const next=[...areas.selected,option.dataset.place];
+    if(next.join(', ').length>240){areas.note.textContent='Список мест слишком длинный. Уберите одно из выбранных.';return}
+    areas.selected.push(option.dataset.place);
+    areas.input.value='';
+    areas.paint();
+    areas.input.focus();
+    suggest();
+  };
+
+  const custom=document.querySelector('#worker-skill-picker');
+  const skills=bindTags(custom,'custom_skills',JSON.parse,JSON.stringify);
+  const addSkill=()=>{
+    const skill=skills.input.value.trim().replace(/\s+/g,' ');
+    if(!skill)return;
+    const standard=kinds.find(kind=>searchKey(kind)===searchKey(skill));
+    if(standard){
+      const checkbox=[...custom.closest('fieldset').querySelectorAll('input[name="skills"]')].find(field=>field.value===standard);
+      checkbox.checked=true;
+    }else if(!skills.selected.some(item=>searchKey(item)===searchKey(skill))){
+      if(skills.selected.length>=12){skills.note.textContent='Можно добавить до 12 своих специализаций.';return}
+      skills.selected.push(skill);
+      skills.paint();
+    }
+    skills.input.value='';
+    skills.note.textContent='Добавлено: '+skill;
+    skills.input.focus();
+  };
+  custom.querySelector('.worker-custom button').onclick=addSkill;
+  skills.input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();addSkill()}};
+}
+
 function editProfile(p={}){
   const name=p.name||'Исполнитель';
-  const types=['Частный мастер','Бригада','Компания'];
+  const types=[['Частный мастер','person'],['Бригада','helmet'],['Компания','home']];
+  const draft=workspaceState()?.draft;
+  const values=new URLSearchParams(draft?.id==='worker-profile'?draft.values:[]);
+  const customSkills=(p.skills||[]).filter(skill=>!kinds.includes(skill));
   show(null,'Настройки профиля',`<form id="worker-profile">
     <div class="worker-editor-identity">
       <span class="settings-avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</span>
@@ -290,7 +384,10 @@ function editProfile(p={}){
     <section aria-labelledby="work-identity">
       <h2 id="work-identity">Основные сведения</h2>
       <label>Имя или название команды<input id="work-name" name="name" maxlength="90" required value="${esc(p.name||'')}"></label>
-      <label>Формат работы<select id="work-type" name="type">${types.map(type=>`<option ${p.type===type?'selected':''}>${type}</option>`).join('')}</select></label>
+      <fieldset class="worker-formats">
+        <legend>Формат работы</legend>
+        <div>${types.map(([type,symbol])=>`<label><input type="radio" name="type" value="${type}" ${(p.type||types[0][0])===type?'checked':''}>${icon(symbol)}<span>${type}</span></label>`).join('')}</div>
+      </fieldset>
       <label>О себе<textarea id="work-about" name="about" rows="2" maxlength="1500" placeholder="Расскажите о вашем опыте и работах">${esc(p.about||'')}</textarea></label>
     </section>
     <section aria-labelledby="work-location">
@@ -299,14 +396,29 @@ function editProfile(p={}){
         <label>Город<input id="work-city" name="city" required maxlength="100" value="${esc(p.city||'')}"></label>
         <label>Стаж, лет<input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="${esc(p.years??'')}"></label>
       </div>
-      <label>Где работаете<input id="work-areas" name="areas" maxlength="240" placeholder="Города и районы" value="${esc(p.areas||'')}"></label>
+      <div id="worker-area-picker" class="worker-picker">
+        <label for="work-areas">Где работаете</label>
+        <div class="worker-search">${icon('search')}<input id="work-areas" name="area_query" type="search" maxlength="100" autocomplete="off" placeholder="Найти город или район" aria-controls="worker-area-results"></div>
+        <input type="hidden" name="areas" value="${esc(values.get('areas')??p.areas??'')}">
+        <div id="worker-area-results" class="worker-suggestions" hidden></div>
+        <div class="worker-picked" role="group" aria-label="Выбранные места"></div>
+        <p class="worker-picker-note" role="status"></p>
+      </div>
     </section>
     <fieldset class="specialties">
       <legend>Специализация</legend>
       <div class="chips">${kinds.map(kind=>`<label><input type="checkbox" name="skills" value="${esc(kind)}" ${p.skills?.includes(kind)?'checked':''}> ${esc(kind)}</label>`).join('')}</div>
+      <div id="worker-skill-picker" class="worker-picker">
+        <label for="work-custom-skill">Другая специализация</label>
+        <div class="worker-custom"><input id="work-custom-skill" name="skill_query" maxlength="60" placeholder="Например, сварочные работы"><button type="button" aria-label="Добавить специализацию">${icon('add')}</button></div>
+        <input type="hidden" name="custom_skills" value="${esc(values.get('custom_skills')??JSON.stringify(customSkills))}">
+        <div class="worker-picked" role="group" aria-label="Добавленные специализации"></div>
+        <p class="worker-picker-note" role="status"></p>
+      </div>
     </fieldset>
     <button class="primary wide">Сохранить профиль</button>
   </form>`,'worker');
+  bindWorkerPickers();
 }
 function myBid(t,p){return (t.bids||[]).find(b=>b.id===p.id)}
 const marketCategories=[
@@ -562,7 +674,11 @@ document.addEventListener('submit',async event=>{
   try{
     if(form.id==='worker-profile'){
       if(!workerEnabled())return;
-      const skills=data.getAll('skills');
+      const query=value('skill_query').replace(/\s+/g,' ');
+      const pendingSkill=kinds.find(kind=>searchKey(kind)===searchKey(query))||query;
+      const skills=uniqueSkills([...data.getAll('skills'),...JSON.parse(value('custom_skills')),pendingSkill]);
+      if(value('area_query'))throw Error('Выберите город или район из подсказок либо очистите поиск.');
+      if(skills.filter(skill=>!kinds.some(kind=>searchKey(kind)===searchKey(skill))).length>12)throw Error('Можно добавить до 12 своих специализаций.');
       if(!skills.length||!value('name')||!value('city'))throw Error('Укажите имя, город и хотя бы одну специальность.');
       accountStorage.setItem(profileKey,JSON.stringify({id:myProfile()?.id||portfolioOwner(),name:value('name'),city:value('city'),years:value('years'),areas:value('areas'),about:value('about'),type:value('type'),skills}));
       const tender=route().params.get('tender');

@@ -84,6 +84,7 @@ export function restoreWorkspace() {
     const values = new URLSearchParams(snapshot.draft.values);
     for (const field of draft.querySelectorAll('input[name], select[name], textarea[name]')) {
       if (field.type === 'checkbox') field.checked = values.getAll(field.name).includes(field.value);
+      else if (field.type === 'radio') field.checked = values.get(field.name) === field.value;
       else if (!field.readOnly && values.has(field.name)) field.value = values.get(field.name);
     }
     draft.querySelectorAll('details').forEach((panel, index) => {panel.open = snapshot.draft.expanded[index];});
