@@ -75,7 +75,8 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     metric(experience,'Стаж');
   const header='<div class="identity">'+avatarInput+'<div class="profile-numbers"><strong>'+esc(p.name||'Заказчик')+'</strong>'+(owner==='customer'?'':'<div class="profile-metrics">'+metrics+'</div>')+'</div></div>';
   const areas=p.areas?'Работает в районах и городах · '+p.areas:'';
-  const facts=[[p.type,p.teamSize?'Команда · '+p.teamSize+' чел.':'',p.city].filter(Boolean).join(' · '),areas].filter(Boolean).map(text=>'<small style="display:block">'+esc(text)+'</small>').join('');
+  const city=p.areas?.split(',').some(place=>place.trim().toLowerCase()===p.city?.toLowerCase())?'':p.city;
+  const facts=[[p.type,p.teamSize?'Команда · '+p.teamSize+' чел.':'',city].filter(Boolean).join(' · '),areas].filter(Boolean).map(text=>'<small style="display:block">'+esc(text)+'</small>').join('');
   const demoLabel=p.demo?'Демонстрационный профиль':samples.length?'Работы и отзывы · демо':'';
   const bio='<div class="profile-bio">'+(demoLabel?'<small class="profile-demo">'+demoLabel+'</small>':'')+facts+(p.about?'<p id="profile-description" class="bio-short">'+esc(p.about)+'</p><button type="button" class="bio-toggle" aria-controls="profile-description" aria-expanded="false" hidden>ещё</button>':'')+(p.skills?.length?'<small>'+p.skills.map(esc).join(' · ')+'</small>':'')+'</div>';
   const score=Number(String(p.rating||'').replace(',','.'));

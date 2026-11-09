@@ -1,4 +1,4 @@
-import {portfolio} from './portfolio.js?v=20261109-3';
+import {portfolio} from './portfolio.js?v=20261109-4';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';
@@ -231,8 +231,9 @@ function customerBadge(t){
   return '<span class="customer-badge">'+img(['maria','ivan','musa'].includes(t.owner)?t.owner:'man')+'<span>'+esc(record?.name||t.customer)+'</span></span>';
 }
 function offers(t,filter){
-  const types={'Бригады':'Бригада','Компании':'Компания','Мастера':'Частный мастер'};
-  const all=bids(t), list=all.filter(p=>filter==='Все'||p.type===types[filter]);
+  const types={'Компании':'Строительная компания','Мастера':'Частный мастер'};
+  if(filter==='Бригады')filter='Компании';
+  const all=bids(t), list=all.filter(p=>filter==='Все'||workerType(p.type)===types[filter]);
   const filters=['Все',...Object.keys(types)].map(name=>
     '<button data-tab="'+name+'" aria-pressed="'+(name===filter)+'">'+name+'</button>'
   ).join('');
@@ -243,7 +244,7 @@ function offers(t,filter){
     ${cover}<div class="post-caption"><dl class="post-spec"><div><dt>Бюджет</dt><dd>до ${money(t.budget)}</dd></div><div><dt>Срок работ</dt><dd>${esc(t.period)}</dd></div></dl>
     ${t.description?'<p>'+esc(t.description)+'</p>':''}</div></article>`;
   const cards=list.map(p=>`<article class="entry offer-row">${avatar(p)}<div><strong>${esc(p.name)}</strong>
-    <small>${p.demo?'<b class="score">★ '+esc(p.rating)+'</b> · ':''}${esc(p.type)}${p.demo?' · Демо':''}</small>
+    <small>${p.demo?'<b class="score">★ '+esc(p.rating)+'</b> · ':''}${esc(workerType(p.type))}${p.demo?' · Демо':''}</small>
     <div class="offer-foot"><div><b>${money(p.price)}</b><small>${esc(p.period)}</small></div>
     ${link('profile/'+t.id+'/'+encodeURIComponent(p.id),'Посмотреть','btn primary')}</div></div></article>`).join('');
   show(1,'Отклики на тендер',post+'<h3 class="responses-title">Отклики <small>'+all.length+'</small></h3><div class="offer-filters">'+filters+'</div>'+ (cards||'<p class="muted">Таких откликов пока нет.</p>'),'list');
@@ -251,7 +252,7 @@ function offers(t,filter){
 function avatar(p){return p.demo?img(p.photo):'<span class="avatar">'+esc(p.name.trim().slice(0,1))+'</span>'}
 async function profile(t,p,tab,filter){
   const live=myProfile();
-  const person=live?.id===p.id?live:p;
+  const person=live?.id===p.id?live:{...p,type:workerType(p.type)};
   const terms=`<details class="bid-details"><summary><strong>Отклик · ${esc(t.kind)}</strong>
     <b>${money(p.price)} · ${esc(p.period)}</b></summary>
     <div class="bid-expanded"><div class="bid-copy"><strong>Ваша задача</strong><small>${esc(t.district)}</small>
@@ -274,8 +275,9 @@ function portfolioOwner(){
 }
 function myProfile(){
   const p=JSON.parse(accountStorage.getItem(profileKey)||'null');
-  return p && {...p,handle:currentIdentity()?.username||p.handle,teamSize:teamMembers(p).length+1};
+  return p && {...p,type:workerType(p.type),handle:currentIdentity()?.username||p.handle,teamSize:teamMembers(p).length+1};
 }
+function workerType(type){return ['Бригада','Компания'].includes(type)?'Строительная компания':type}
 function workerEnabled(){
   const auth=currentAuth();
   const data=auth?.user?.user_metadata;
@@ -289,7 +291,8 @@ const servicePlaces=[
   'Шаройский район','Шатойский район','Шелковской район'
 ];
 const searchKey=value=>value.trim().toLocaleLowerCase('ru').replaceAll('ё','е');
-const uniqueSkills=skills=>[...new Map(skills.filter(Boolean).map(skill=>[searchKey(skill),skill])).values()];
+const splitPlaces=value=>value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean);
+const uniqueLabels=skills=>[...new Map(skills.filter(Boolean).map(skill=>[searchKey(skill),skill])).values()];
 
 function placeField(id,name,label,value='',required=false){
   return `<div id="${id}-picker" class="worker-picker place-field">
@@ -370,7 +373,7 @@ function bindWorkerPickers(){
     return {input,selected,note,paint};
   };
   const geo=document.querySelector('#worker-area-picker');
-  const areas=bindTags(geo,'areas',value=>value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean),items=>items.join(', '));
+  const areas=bindTags(geo,'areas',splitPlaces,items=>items.join(', '));
   bindPlacePicker(geo,{
     excluded:()=>areas.selected,
     select(place){
@@ -408,9 +411,12 @@ function bindWorkerPickers(){
 
 function editProfile(p={}){
   const name=p.name||'Исполнитель';
-  const types=[['Частный мастер','person'],['Бригада','helmet'],['Компания','home']];
+  const types=[['Частный мастер','person'],['Строительная компания','home']];
   const draft=workspaceState()?.draft;
   const values=new URLSearchParams(draft?.id==='worker-profile'?draft.values:[]);
+  const places=values.has('city')||!values.has('areas')
+    ?uniqueLabels([values.get('city')??p.city,...splitPlaces(values.get('areas')??p.areas??'')]).join(', ')
+    :values.get('areas');
   const customSkills=(p.skills||[]).filter(skill=>!kinds.includes(skill));
   show(null,'Настройки профиля',`<form id="worker-profile">
     <div class="worker-editor-identity">
@@ -428,18 +434,15 @@ function editProfile(p={}){
     </section>
     <section aria-labelledby="work-location">
       <h2 id="work-location">География и стаж</h2>
-      <div class="worker-editor-pair">
-        ${placeField('work-city','city','Город',p.city,true)}
-        <label>Стаж, лет<input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="${esc(p.years??'')}"></label>
-      </div>
       <div id="worker-area-picker" class="worker-picker">
-        <label for="work-areas">Где работаете</label>
+        <label for="work-areas">Города и районы работы</label>
         <div class="worker-search">${icon('search')}<input id="work-areas" name="area_query" type="search" maxlength="100" autocomplete="off" placeholder="Найти город или район" aria-controls="worker-area-results"></div>
-        <input type="hidden" name="areas" value="${esc(values.get('areas')??p.areas??'')}">
+        <input type="hidden" name="areas" value="${esc(places)}">
         <div id="worker-area-results" class="worker-suggestions" hidden></div>
         <div class="worker-picked" role="group" aria-label="Выбранные места"></div>
         <p class="worker-picker-note" role="status"></p>
       </div>
+      <label class="worker-years">Стаж, лет<input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="${esc(p.years??'')}"></label>
     </section>
     <fieldset class="specialties">
       <legend>Специализация</legend>
@@ -454,7 +457,6 @@ function editProfile(p={}){
     </fieldset>
     <button class="primary wide">Сохранить профиль</button>
   </form>`,'worker');
-  bindPlacePicker(document.querySelector('#work-city-picker'));
   bindWorkerPickers();
 }
 function myBid(t,p){return (t.bids||[]).find(b=>b.id===p.id)}
@@ -714,11 +716,12 @@ document.addEventListener('submit',async event=>{
       if(!workerEnabled())return;
       const query=value('skill_query').replace(/\s+/g,' ');
       const pendingSkill=kinds.find(kind=>searchKey(kind)===searchKey(query))||query;
-      const skills=uniqueSkills([...data.getAll('skills'),...JSON.parse(value('custom_skills')),pendingSkill]);
+      const skills=uniqueLabels([...data.getAll('skills'),...JSON.parse(value('custom_skills')),pendingSkill]);
       if(value('area_query'))throw Error('Выберите город или район из подсказок либо очистите поиск.');
       if(skills.filter(skill=>!kinds.some(kind=>searchKey(kind)===searchKey(skill))).length>12)throw Error('Можно добавить до 12 своих специализаций.');
-      if(!skills.length||!value('name')||!value('city'))throw Error('Укажите имя, город и хотя бы одну специальность.');
-      accountStorage.setItem(profileKey,JSON.stringify({id:myProfile()?.id||portfolioOwner(),name:value('name'),city:value('city'),years:value('years'),areas:value('areas'),about:value('about'),type:value('type'),skills}));
+      const [city]=splitPlaces(value('areas'));
+      if(!skills.length||!value('name')||!city)throw Error('Укажите имя, место работы и хотя бы одну специальность.');
+      accountStorage.setItem(profileKey,JSON.stringify({id:myProfile()?.id||portfolioOwner(),name:value('name'),city,years:value('years'),areas:value('areas'),about:value('about'),type:workerType(value('type'))||'Частный мастер',skills}));
       const tender=route().params.get('tender');
       const target=tender&&/^[a-z0-9-]+$/i.test(tender)?'#apply/'+tender:'#worker';
       if(!finishWorkspaceEdit(target))await render();

@@ -522,11 +522,11 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
 #worker-profile label, #worker-profile .specialties, #worker-profile .wide { margin: 0; }
 #worker-profile :is(input:not([type="checkbox"]),select,textarea) { background: var(--workspace-field); border-color: transparent; }
 #worker-profile :is(input:not([type="checkbox"]),select,textarea):focus { border-color: var(--green); }
-.worker-editor-pair { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 8px; }
+.worker-years { max-width: 140px; }
 #worker-profile .chips { margin-top: 5px; gap: 5px; }
 #worker-profile .chips label { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 8px; }
 #worker-profile .worker-formats { margin: 0; border: 0; padding: 0; min-width: 0; }
-.worker-formats > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; margin-top: 5px; }
+.worker-formats > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; margin-top: 5px; }
 #worker-profile .worker-formats label {
   position: relative;
   display: grid;
