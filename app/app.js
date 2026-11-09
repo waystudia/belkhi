@@ -1,20 +1,21 @@
-import {portfolio} from './portfolio.js?v=20261109-2';
+import {portfolio} from './portfolio.js?v=20261109-3';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';
 import {accountDestination, currentAuth, currentIdentity, isOwner, registrationStep, restoreAuth, watchSession} from './auth.js';
-import {accountScreen, demoMode} from './account.js';
+import {accountScreen, demoMode} from './account.js?v=20261109-1';
 import {registrationPages, registrationScreen} from './registration.js';
 import {accountKey, accountStorage, initializeAccountStorage} from './account-storage.js';
 import {moderation} from './moderation.js';
-import {icon} from './icons.js?v=20261109-1';
+import {icon} from './icons.js?v=20261109-2';
 import {isStoredFile, packFile, unpackFile} from './file-storage.js';
-import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js';
+import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js?v=20261109-1';
 
 let authError;
 try { await restoreAuth(); }
 catch (error) { authError = error.message; }
 if(currentAuth()) sessionStorage.removeItem('belkhi-demo-session');
+else if(!authError) sessionStorage.setItem('belkhi-demo-session','1');
 initializeAccountStorage();
 watchSession();
 const screen = document.querySelector('#screen');
@@ -180,7 +181,7 @@ function show(step,title,body,back=''){
   document.querySelector('.rail small').textContent='БЕЛХИ';
   document.querySelector('.rail h2').textContent='От заявки до стройки';
   const toggle=document.querySelector('#switch-role');
-  toggle.hidden=page==='worker' && !currentAuth();
+  toggle.hidden=!currentAuth() || page==='worker';
   toggle.textContent=currentAuth()?'Аккаунт':'Войти';
   toggle.href=currentAuth()?'#account':'#login';
   document.querySelector('.brand').href=currentAuth()?'#'+accountDestination():demoMode()?'#market':'#login';
@@ -279,7 +280,33 @@ function workerEnabled(){
   return !auth || data?.belkhi_worker_enabled===true || data?.belkhi_starting_mode==='worker' || Boolean(myProfile());
 }
 function editProfile(p={}){
-  show(null,'Настройки профиля','<div class="profile-id">'+avatar({...p,name:p.name||'И'})+'<div><strong>'+esc(p.name||'Новый исполнитель')+'</strong><small>'+esc([p.type,p.city].filter(Boolean).join(' · '))+'</small></div></div><form id="worker-profile"><details class="fold" '+(!p.id?'open':'')+'><summary>Основные сведения</summary><div><label for="work-type">От чьего лица вы работаете</label><select id="work-type" name="type">'+['Частный мастер','Бригада','Компания'].map(v=>'<option '+(p.type===v?'selected':'')+'>'+v+'</option>').join('')+'</select><label for="work-name">Имя или название команды</label><input id="work-name" name="name" maxlength="90" required value="'+esc(p.name||'')+'"></div></details><details class="fold" '+(!p.id?'open':'')+'><summary>Специализация<small>'+esc(p.skills?.join(' · ')||'Выберите виды работ')+'</small></summary><div><fieldset class="specialties"><legend>Специализация</legend><div class="chips">'+kinds.map(k=>'<label><input type="checkbox" name="skills" value="'+esc(k)+'" '+(p.skills?.includes(k)?'checked':'')+'> '+esc(k)+'</label>').join('')+'</div></fieldset></div></details><details class="fold" '+(!p.id?'open':'')+'><summary>Город и опыт</summary><div><label for="work-city">Город</label><input id="work-city" name="city" required maxlength="100" value="'+esc(p.city||'')+'"><label for="work-years">Стаж, полных лет</label><input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="'+esc(p.years??'')+'"><label for="work-areas">Где работаете</label><input id="work-areas" name="areas" maxlength="240" placeholder="Города и районы через запятую" value="'+esc(p.areas||'')+'"><label for="work-about">О себе</label><textarea id="work-about" name="about" maxlength="1500" placeholder="Опыт и виды работ">'+esc(p.about||'')+'</textarea></div></details><button class="primary wide">Сохранить профиль</button></form>','worker');
+  const name=p.name||'Исполнитель';
+  const types=['Частный мастер','Бригада','Компания'];
+  show(null,'Настройки профиля',`<form id="worker-profile">
+    <div class="worker-editor-identity">
+      <span class="settings-avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</span>
+      <div><strong>${esc(name)}</strong><small>Профиль исполнителя</small></div>
+    </div>
+    <section aria-labelledby="work-identity">
+      <h2 id="work-identity">Основные сведения</h2>
+      <label>Имя или название команды<input id="work-name" name="name" maxlength="90" required value="${esc(p.name||'')}"></label>
+      <label>Формат работы<select id="work-type" name="type">${types.map(type=>`<option ${p.type===type?'selected':''}>${type}</option>`).join('')}</select></label>
+      <label>О себе<textarea id="work-about" name="about" rows="2" maxlength="1500" placeholder="Расскажите о вашем опыте и работах">${esc(p.about||'')}</textarea></label>
+    </section>
+    <section aria-labelledby="work-location">
+      <h2 id="work-location">География и стаж</h2>
+      <div class="worker-editor-pair">
+        <label>Город<input id="work-city" name="city" required maxlength="100" value="${esc(p.city||'')}"></label>
+        <label>Стаж, лет<input id="work-years" type="number" inputmode="numeric" min="0" max="100" name="years" value="${esc(p.years??'')}"></label>
+      </div>
+      <label>Где работаете<input id="work-areas" name="areas" maxlength="240" placeholder="Города и районы" value="${esc(p.areas||'')}"></label>
+    </section>
+    <fieldset class="specialties">
+      <legend>Специализация</legend>
+      <div class="chips">${kinds.map(kind=>`<label><input type="checkbox" name="skills" value="${esc(kind)}" ${p.skills?.includes(kind)?'checked':''}> ${esc(kind)}</label>`).join('')}</div>
+    </fieldset>
+    <button class="primary wide">Сохранить профиль</button>
+  </form>`,'worker');
 }
 function myBid(t,p){return (t.bids||[]).find(b=>b.id===p.id)}
 const marketCategories=[
@@ -562,7 +589,7 @@ document.addEventListener('submit',async event=>{
 
 const readLocal=(key,fallback)=>JSON.parse(accountStorage.getItem(key)||JSON.stringify(fallback));
 const writeLocal=(key,value)=>accountStorage.setItem(key,JSON.stringify(value));
-const portfolioUI={show,esc,link,objectURL,notice,render,showSamples:demoMode()};
+const portfolioUI={show,esc,link,objectURL,notice,render,showSamples:demoMode(),signedIn:Boolean(currentAuth())};
 function route(){
   const [path,query]=location.hash.slice(1).split('?');const [page,id,index]=path.split('/');
   return {page:page||(currentAuth()?accountDestination():demoMode()?'market':'login'),id,index,params:new URLSearchParams(query)};
@@ -692,7 +719,7 @@ document.addEventListener('click',async e=>{
     }
     return;
   }
-  if(document.body.dataset.surface==='app' && a.tagName==='A'){
+  if(a.tagName==='A' && (document.body.dataset.surface==='app' || a.matches('.screen-heading a'))){
     if(a.hash?.startsWith('#profile/')&&route().params.get('tab')&&!a.hash.includes('?')){
       a.hash+='?from='+encodeURIComponent(route().params.get('tab'));
     }

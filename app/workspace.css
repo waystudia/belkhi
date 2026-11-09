@@ -13,7 +13,7 @@ body[data-surface="app"] {
   --workspace-width: 584px;
   --workspace-inset: 16px;
   --workspace-header: 56px;
-  --workspace-bottom: 68px;
+  --workspace-bottom: 54px;
   --workspace-rule: #e1e7e3;
   --workspace-field: #f0f3f1;
   padding-bottom: calc(var(--workspace-bottom) + env(safe-area-inset-bottom));
@@ -106,6 +106,10 @@ body[data-surface="app"] #bottom-nav .ui-icon { width: 23px; height: 23px; }
 body[data-surface="app"] #bottom-nav a[aria-current] { color: var(--green); }
 body[data-surface="app"] #bottom-nav a[aria-current] .ui-icon { stroke-width: 2.15; transform: none; }
 body[data-surface="app"] #bottom-nav a:active { background: var(--mint); }
+@media (max-width: 799px) {
+  body[data-surface="app"] #bottom-nav a { min-height: 44px; }
+  body[data-surface="app"] #bottom-nav a span { display: none; }
+}
 
 @media (min-width: 800px) {
   body[data-surface="app"] { padding-bottom: 0; --workspace-rail: 180px; --workspace-bottom: 0px; }
@@ -302,6 +306,18 @@ main:has(.work-profile) > .screen-heading {
 }
 main:has(.work-profile) > .screen-heading h1 { font-size: 14px; }
 .work-profile .profile-settings { top: 0; right: var(--workspace-inset); }
+.work-profile:has(.profile-account) .profile-settings { right: auto; left: var(--workspace-inset); }
+body[data-surface="app"] main:has(.profile-account) > h1 {
+  display: grid;
+  place-items: center;
+  min-height: var(--control-height);
+  margin: 0 calc(-1 * var(--workspace-inset)) 12px;
+  padding: 4px calc(var(--workspace-inset) + var(--control-height));
+  border-bottom: 1px solid var(--workspace-rule);
+  text-align: center;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
 .work-profile .profile-settings svg { width: 19px; height: 19px; }
 .work-profile .identity { gap: 16px; padding: 0; margin: 0; }
 .work-profile .identity .portrait { width: 72px; height: 72px; flex: 0 0 72px; }
@@ -336,6 +352,8 @@ main:has(.work-profile) > .screen-heading h1 { font-size: 14px; }
   border-radius: 7px;
   background: var(--workspace-field);
   font-size: 12px;
+  min-height: 34px;
+  padding-block: 4px;
 }
 .work-profile .profile-actions button:active { background: var(--mint); }
 .work-profile .profile-actions .ui-icon { width: 15px; height: 15px; }
@@ -343,6 +361,7 @@ main:has(.work-profile) > .screen-heading h1 { font-size: 14px; }
 .work-profile .profile-shortcuts a { min-width: 60px; font-size: 10px; }
 .work-profile .profile-shortcuts .shortcut-circle { width: 40px; height: 40px; }
 .work-profile .profile-shortcuts .ui-icon { width: 18px; height: 18px; }
+.profile-account { display: inline-flex; align-items: center; min-height: 36px; color: var(--green); font-size: 12px; font-weight: 650; }
 .work-profile details.bid-details { margin: 8px 0; }
 .work-profile .bid-details > summary { border-radius: 7px; font-size: 12px; }
 .work-profile .profile-sections, .work-profile .tiles { margin-inline: calc(-1 * var(--workspace-inset)); }
@@ -361,6 +380,17 @@ main:has(.work-profile) > .screen-heading h1 { font-size: 14px; }
   min-height: calc(100svh - var(--workspace-header) - var(--workspace-bottom) - 45px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 .work-publications .work-author { padding: 8px var(--workspace-inset); min-height: 56px; }
+.work-publications .work-author > span { flex: 0 0 32px; }
+.work-publications .work-author > div { min-width: 0; overflow-wrap: anywhere; }
+.work-publications .work-author [data-edit-work] {
+  flex: 0 0 44px;
+  width: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+}
+.work-publications [data-edit-work] .ui-icon { width: 19px; height: 19px; }
 .work-publications .post-image { width: 100%; height: auto; max-height: min(68dvh, 660px); object-fit: contain; background: var(--workspace-field); }
 .work-publication-copy { padding: 12px var(--workspace-inset) 16px; }
 .work-publication-copy :is(h3,p) { margin: 0 0 4px; }
@@ -425,11 +455,11 @@ body[data-surface="app"] main:has(.work-publications) .screen-heading {
 .tender-attachments .file:first-child { margin-top: 8px; }
 .tender-attachments .file img { flex: none; width: 38px; height: 38px; border-radius: 5px; object-fit: cover; }
 .tender-attachments .file button { width: var(--control-height); padding: 0; flex: none; }
-#tender, #bid-form, #crew-form, #add-photo, #worker-profile .fold[open] > div {
+#tender, #bid-form, #crew-form, #add-photo {
   display: grid;
   gap: var(--field-gap);
 }
-:is(#tender,#bid-form,#crew-form,#add-photo) label, #worker-profile .fold > div > :is(label,fieldset),
+:is(#tender,#bid-form,#crew-form,#add-photo) label,
 #tender :is(.wide,.caption), #bid-form .bid-submit, #crew-form .wide, #add-photo :is(.caption,.publish) { margin: 0; }
 #add-photo .caption:empty { display: none; }
 #add-photo .publish { justify-self: end; }
@@ -478,6 +508,23 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
 #screen .customer-settings section { gap: var(--control-gap); }
 #screen .customer-settings .privacy-note span { font-size: 11px; }
 #screen .customer-settings .settings-pair { grid-template-columns: repeat(2, minmax(0,1fr)); }
+#worker-profile { display: grid; gap: 12px; }
+.worker-editor-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.worker-editor-identity .settings-avatar { width: 40px; height: 40px; font-size: 16px; }
+.worker-editor-identity small { display: block; color: var(--muted); font-size: 12px; }
+#worker-profile section { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--workspace-rule); }
+#worker-profile h2, #screen #worker-profile legend { margin: 0; font-size: 13px; font-weight: 700; }
+#worker-profile label, #worker-profile .specialties, #worker-profile .wide { margin: 0; }
+#worker-profile :is(input:not([type="checkbox"]),select,textarea) { background: var(--workspace-field); border-color: transparent; }
+#worker-profile :is(input:not([type="checkbox"]),select,textarea):focus { border-color: var(--green); }
+.worker-editor-pair { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap: 8px; }
+#worker-profile .chips { margin-top: 5px; gap: 5px; }
+#worker-profile .chips label { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 8px; }
 
 @media (max-width: 799px) {
   body[data-surface="app"]:has(#screen:is([data-page="account"],[data-page="activate-worker"])) header,

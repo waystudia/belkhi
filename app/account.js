@@ -101,7 +101,7 @@ export function accountScreen(page, {show, notice, esc, link, workerEnabled, act
     </form>
     <div class="entry-links">${admin ? link('login', 'Войти в аккаунт', 'back') : link('signup', 'Создать аккаунт', 'back')}
       ${!admin ? '<button class="demo-link" type="button" id="demo-entry">Демонстрационная версия</button>' : ''}</div>
-    </div>`);
+    </div>`, !admin && demoMode() ? 'worker' : '');
   root.querySelector('#demo-entry')?.addEventListener('click', () => {
     sessionStorage.setItem('belkhi-demo-session', '1');
     reloadAt('market');

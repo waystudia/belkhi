@@ -42,7 +42,7 @@ export function openWorkspaceLink(event, link) {
   }
   if (!link.matches('#screen a, #bottom-nav a, #workspace-saved, #switch-role')) return;
   const target = link.hash;
-  if (target === '#login' || target === '#admin' || target === '#catalog') return;
+  if (target === '#admin' || target === '#catalog') return;
   event.preventDefault();
   openWorkspaceRoute(target, link);
 }

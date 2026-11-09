@@ -1,5 +1,5 @@
 import {accountKey, accountStorage} from './account-storage.js';
-import {icon} from './icons.js';
+import {icon} from './icons.js?v=20261109-2';
 import {packFile, unpackFile} from './file-storage.js';
 import {replaceWorkspaceParams} from './workspace-nav.js';
 
@@ -18,7 +18,7 @@ async function photos(mode,op){
   const result=op(tx.objectStore('photos'));
   return new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve(result.result);tx.onabort=()=>reject(tx.error)});
 }
-export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,render,showSamples},extra='',back='',objects=''){
+export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,render,showSamples,signedIn},extra='',back='',objects=''){
   const here=location.hash;
   const stored=await photos('readonly',s=>s.index('owner').getAll(owner));
   if(location.hash!==here)return;
@@ -102,7 +102,7 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     fallback.delete('work');
     const posts=works.map((work,index)=>`<article class="work-post" ${work===selectedWork?'data-current-publication':''}>
       <div class="work-author"><span>${face}</span><div><strong>${esc(p.name||'Исполнитель')}</strong><small>@${esc(handle)}</small></div>
-        ${editing?'<button type="button" data-edit-work="'+index+'">Редактировать</button>':''}</div>
+        ${editing?'<button type="button" data-edit-work="'+index+'" aria-label="Редактировать работу" title="Редактировать работу">'+icon('edit')+'</button>':''}</div>
       <img class="post-image" ${work===selectedWork?'':'loading="lazy"'} ${work.width&&work.height?'width="'+work.width+'" height="'+work.height+'"':''} src="${esc(mediaUrl(work))}" alt="${esc(work.title)}">
       <div class="work-publication-copy"><h3>${esc(work.title)}</h3>
       ${work.sample?'<small>Демо · Пример работы</small>':''}${work.description?'<p>'+esc(work.description)+'</p>':''}</div>
@@ -118,8 +118,10 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     }));
     return;
   }
+  const account=editing?'<a class="profile-account" data-view-key="profile-account" href="#'+(signedIn?'account':'login')+'">'+
+    (signedIn?'Настройки аккаунта':'Войти или создать аккаунт')+'</a>':'';
   show(null,'@'+handle,'<div class="work-profile">'+settings+header+bio+
-    (owner==='customer'?'':actions+shortcuts+extra+sections)+'</div>',back);
+    (owner==='customer'?'':actions+shortcuts+account+extra+sections)+'</div>',editing?'':back);
   const description=document.querySelector('#profile-description');
   if(description){
     const toggle=document.querySelector('.bio-toggle');
