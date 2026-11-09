@@ -7,7 +7,7 @@ import {accountScreen, demoMode} from './account.js';
 import {registrationPages, registrationScreen} from './registration.js';
 import {accountKey, accountStorage, initializeAccountStorage} from './account-storage.js';
 import {moderation} from './moderation.js';
-import {icon} from './icons.js';
+import {icon} from './icons.js?v=20261109-1';
 import {isStoredFile, packFile, unpackFile} from './file-storage.js';
 import {finishWorkspaceEdit, openWorkspaceLink, replaceWorkspaceParams, replaceWorkspaceRoute, restoreWorkspace, workspaceState} from './workspace-nav.js';
 
@@ -79,7 +79,7 @@ function bottomNav(page, params){
     ['market','Лента','home'],
     ['market?view=grid','Поиск','search'],
     ['new','Создать тендер','add'],
-    [customerMode?'list':'works',customerMode?'Мои объекты':'Работы','folder'],
+    customerMode?['list','Мои объекты','folder']:['works','Работы','helmet'],
     [activeProfile(),'Профиль','person']
   ];
   const active = page==='market' && params.get('view')==='grid' ? 'market?view=grid'

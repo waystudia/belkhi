@@ -3,6 +3,7 @@ const paths = {
   search: 'M16 10.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Zm-1.5 4L21 21',
   add: 'M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5Zm4 5v8m-4-4h8',
   folder: 'M3 7h7l2 2h9v11H3zm0 0V5h7l2 2h7v2',
+  helmet: 'M10 9V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4M10 6a7 7 0 0 0-5 7v2m9-9a7 7 0 0 1 5 7v2M4 15h16a2 2 0 0 1 0 4H4a2 2 0 0 1 0-4z',
   person: 'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-1a8 8 0 0 1 16 0v1',
   bookmark: 'M6 3h12v18l-6-4-6 4z',
   filter: 'M4 6h16M7 12h10m-7 6h4M8 4v4m8 2v4m-4 2v4',
