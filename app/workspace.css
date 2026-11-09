@@ -525,6 +525,15 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
 .worker-years { max-width: 140px; }
 #worker-profile .chips { margin-top: 5px; gap: 5px; }
 #worker-profile .chips label { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 8px; }
+#worker-skill-toggle {
+  gap: 5px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 22px;
+  font-size: 12px;
+}
+#worker-skill-toggle .ui-icon { width: 15px; height: 15px; }
+#worker-skill-toggle[aria-expanded="true"] { border-color: var(--green); background: var(--mint); color: var(--green); }
 #worker-profile .worker-formats { margin: 0; border: 0; padding: 0; min-width: 0; }
 .worker-formats > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; margin-top: 5px; }
 #worker-profile .worker-formats label {
@@ -583,7 +592,8 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
 }
 .worker-picked button span { flex: none; font-size: 16px; }
 .worker-picker-note { margin: 0; color: var(--muted); font-size: 12px; }
-#worker-skill-picker { margin-top: 10px; }
+#worker-skill-picker { margin-top: 5px; }
+#worker-skill-editor:not([hidden]) { display: grid; gap: 5px; }
 .worker-custom { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 5px; }
 .worker-custom button { padding: 0; border-radius: 9px; }
 

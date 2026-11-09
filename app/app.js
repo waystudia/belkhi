@@ -389,6 +389,16 @@ function bindWorkerPickers(){
 
   const custom=document.querySelector('#worker-skill-picker');
   const skills=bindTags(custom,'custom_skills',JSON.parse,JSON.stringify);
+  const toggle=document.querySelector('#worker-skill-toggle');
+  const editor=custom.querySelector('#worker-skill-editor');
+  const editorState=custom.querySelector('[name="skill_editor_open"]');
+  toggle.onclick=()=>{
+    const open=editor.hidden;
+    editor.hidden=!open;
+    editorState.value=open?'1':'0';
+    toggle.setAttribute('aria-expanded',String(open));
+    if(open)skills.input.focus();
+  };
   const addSkill=()=>{
     const skill=skills.input.value.trim().replace(/\s+/g,' ');
     if(!skill)return;
@@ -418,6 +428,7 @@ function editProfile(p={}){
     ?uniqueLabels([values.get('city')??p.city,...splitPlaces(values.get('areas')??p.areas??'')]).join(', ')
     :values.get('areas');
   const customSkills=(p.skills||[]).filter(skill=>!kinds.includes(skill));
+  const skillEditorOpen=values.get('skill_editor_open')==='1';
   show(null,'Настройки профиля',`<form id="worker-profile">
     <div class="worker-editor-identity">
       <span class="settings-avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</span>
@@ -446,10 +457,15 @@ function editProfile(p={}){
     </section>
     <fieldset class="specialties">
       <legend>Специализация</legend>
-      <div class="chips">${kinds.map(kind=>`<label><input type="checkbox" name="skills" value="${esc(kind)}" ${p.skills?.includes(kind)?'checked':''}> ${esc(kind)}</label>`).join('')}</div>
+      <div class="chips">${kinds.map(kind=>`<label><input type="checkbox" name="skills" value="${esc(kind)}" ${p.skills?.includes(kind)?'checked':''}> ${esc(kind)}</label>`).join('')}
+        <button id="worker-skill-toggle" type="button" aria-expanded="${skillEditorOpen}" aria-controls="worker-skill-editor">${icon('add')} Другая специальность</button>
+      </div>
       <div id="worker-skill-picker" class="worker-picker">
-        <label for="work-custom-skill">Другая специализация</label>
-        <div class="worker-custom"><input id="work-custom-skill" name="skill_query" maxlength="60" placeholder="Например, сварочные работы"><button type="button" aria-label="Добавить специализацию">${icon('add')}</button></div>
+        <div id="worker-skill-editor" ${skillEditorOpen?'':'hidden'}>
+          <label for="work-custom-skill">Название специальности</label>
+          <div class="worker-custom"><input id="work-custom-skill" name="skill_query" maxlength="60" placeholder="Например, сварочные работы"><button type="button" aria-label="Добавить специализацию">${icon('add')}</button></div>
+        </div>
+        <input type="hidden" name="skill_editor_open" value="${skillEditorOpen?'1':'0'}">
         <input type="hidden" name="custom_skills" value="${esc(values.get('custom_skills')??JSON.stringify(customSkills))}">
         <div class="worker-picked" role="group" aria-label="Добавленные специализации"></div>
         <p class="worker-picker-note" role="status"></p>
