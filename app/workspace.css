@@ -41,6 +41,7 @@ body[data-surface="app"] #switch-role {
   background: var(--workspace-field);
   color: var(--ink);
 }
+#switch-role[hidden] { display: none; }
 .workspace-icon {
   display: inline-grid;
   width: var(--control-height);

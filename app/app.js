@@ -180,6 +180,7 @@ function show(step,title,body,back=''){
   document.querySelector('.rail small').textContent='БЕЛХИ';
   document.querySelector('.rail h2').textContent='От заявки до стройки';
   const toggle=document.querySelector('#switch-role');
+  toggle.hidden=page==='worker' && !currentAuth();
   toggle.textContent=currentAuth()?'Аккаунт':'Войти';
   toggle.href=currentAuth()?'#account':'#login';
   document.querySelector('.brand').href=currentAuth()?'#'+accountDestination():demoMode()?'#market':'#login';
