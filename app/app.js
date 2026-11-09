@@ -1,3 +1,4 @@
+import {servicePlaces} from './service-places.js?v=20261109-1';
 import {portfolio} from './portfolio.js?v=20261109-4';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
@@ -283,13 +284,6 @@ function workerEnabled(){
   const data=auth?.user?.user_metadata;
   return !auth || data?.belkhi_worker_enabled===true || data?.belkhi_starting_mode==='worker' || Boolean(myProfile());
 }
-const servicePlaces=[
-  'Грозный','Гудермес','Аргун','Шали','Урус-Мартан','Ачхой-Мартан','Курчалой',
-  'Грозненский район','Гудермесский район','Ачхой-Мартановский район','Веденский район',
-  'Итум-Калинский район','Курчалоевский район','Надтеречный район','Наурский район',
-  'Ножай-Юртовский район','Серноводский район','Урус-Мартановский район','Шалинский район',
-  'Шаройский район','Шатойский район','Шелковской район'
-];
 const searchKey=value=>value.trim().toLocaleLowerCase('ru').replaceAll('ё','е');
 const splitPlaces=value=>value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean);
 const uniqueLabels=skills=>[...new Map(skills.filter(Boolean).map(skill=>[searchKey(skill),skill])).values()];
@@ -309,10 +303,11 @@ function bindPlacePicker(picker,{excluded=()=>[],select}={}){
   const input=picker.querySelector('input[type="search"]');
   const results=picker.querySelector('.worker-suggestions');
   const note=picker.querySelector('.worker-picker-note');
+  const placeKey=value=>searchKey(value).replace(/[\s‐‑–—-]+/g,' ');
   const suggest=()=>{
-    const query=searchKey(input.value);
-    const chosen=new Set(excluded().map(searchKey));
-    const options=query?servicePlaces.filter(place=>searchKey(place).startsWith(query)&&!chosen.has(searchKey(place))).slice(0,6):[];
+    const query=placeKey(input.value);
+    const chosen=new Set(excluded().map(placeKey));
+    const options=query?servicePlaces.filter(place=>placeKey(place).startsWith(query)&&!chosen.has(placeKey(place))):[];
     results.innerHTML=options.map(place=>'<button type="button" data-place="'+esc(place)+'">'+esc(place)+'</button>').join('');
     results.hidden=!options.length;
     note.textContent=query&&!options.length?(select?'Нет новых совпадений. Попробуйте другое название.':'В списке нет совпадений. Можно оставить введённое название.'):'';
