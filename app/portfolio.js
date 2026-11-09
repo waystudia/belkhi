@@ -66,13 +66,18 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     accountStorage.setItem(handleKey,handle);
   }
   const experience=p.years!=null && p.years!==''?new Intl.NumberFormat('ru',{style:'unit',unit:'year',unitDisplay:'long'}).format(Number(p.years)):'—';
-  const metric=(value,label)=>'<div><b>'+esc(value)+'</b><small>'+label+'</small></div>';
-  const metrics=metric(works.length,'Работы')+metric(p.reviews??(samples.length||Number(Boolean(p.review && p.review!=='Отзывов пока нет.'))),'Отзывы')+(owner==='customer'?'':metric(experience,'Стаж'));
+  const metric=(value,label,target)=>{
+    const content='<b>'+esc(value)+'</b><small>'+label+'</small>';
+    return target?'<button type="button" data-profile-jump="'+target+'">'+content+'</button>':'<div>'+content+'</div>';
+  };
+  const metrics=metric(works.length,'Работы','works')+
+    metric(p.reviews??(samples.length||Number(Boolean(p.review && p.review!=='Отзывов пока нет.'))),'Отзывы','reviews')+
+    metric(experience,'Стаж');
   const header='<div class="identity">'+avatarInput+'<div class="profile-numbers"><strong>'+esc(p.name||'Заказчик')+'</strong>'+(owner==='customer'?'':'<div class="profile-metrics">'+metrics+'</div>')+'</div></div>';
   const areas=p.areas?'Работает в районах и городах · '+p.areas:'';
   const facts=[[p.type,p.teamSize?'Команда · '+p.teamSize+' чел.':'',p.city].filter(Boolean).join(' · '),areas].filter(Boolean).map(text=>'<small style="display:block">'+esc(text)+'</small>').join('');
-  const demoLabel=p.demo?'Демонстрационный профиль':samples.length?'Примеры работ и отзывов помечены как демо.':'';
-  const bio='<div class="profile-bio">'+(demoLabel?'<small class="profile-demo">'+demoLabel+'</small>':'')+facts+(p.about?'<p id="profile-description" class="bio-short">'+esc(p.about)+'</p><button type="button" class="bio-toggle" aria-controls="profile-description" aria-expanded="false" hidden>ещё</button>':editing?'<p class="muted">Добавьте описание в настройках профиля.</p>':'')+(p.skills?.length?'<small>'+p.skills.map(esc).join(' · ')+'</small>':'')+'</div>';
+  const demoLabel=p.demo?'Демонстрационный профиль':samples.length?'Работы и отзывы · демо':'';
+  const bio='<div class="profile-bio">'+(demoLabel?'<small class="profile-demo">'+demoLabel+'</small>':'')+facts+(p.about?'<p id="profile-description" class="bio-short">'+esc(p.about)+'</p><button type="button" class="bio-toggle" aria-controls="profile-description" aria-expanded="false" hidden>ещё</button>':'')+(p.skills?.length?'<small>'+p.skills.map(esc).join(' · ')+'</small>':'')+'</div>';
   const score=Number(String(p.rating||'').replace(',','.'));
   const rating=score>0 && score<=5?`<div class="rating-line"><span class="star-meter" aria-hidden="true">★★★★★<i style="width:${score*20}%">★★★★★</i></span><b>${esc(p.rating)} из 5</b><small>Рейтинг</small></div>`:'';
   const reviewImage=p.demo && p.portfolio?.length?'media/'+encodeURIComponent(p.portfolio[0])+'.jpg':'';
@@ -89,13 +94,9 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     <section id="review-posts" aria-label="Отзывы" ${section!=='reviews'?'hidden':''}>${rating}${reviews}</section>`;
   const actions=editing?'<div class="profile-actions"><button id="new-work" aria-haspopup="dialog">'+icon('add')+' Добавить работу</button>'+
     '<button class="profile-share" id="share-profile">Поделиться</button></div>':'';
-  const circle=(target,title,symbol,work)=>'<button type="button" data-profile-jump="'+target+'"><span class="shortcut-circle">'+
-    (work?'<img src="'+esc(mediaUrl(work))+'" alt="">':icon(symbol))+'</span><span>'+title+'</span></button>';
-  const shortcuts='<div class="round-shortcuts profile-shortcuts" data-gallery="profile-shortcuts" aria-label="Разделы и сведения">'+
-    circle('works','Работы','grid',works[0])+circle('reviews','Отзывы','star')+
-    (extra?circle('bid','Отклик','folder'):'')+
-    (editing?'<a href="#crew"><span class="shortcut-circle">'+icon('person')+'</span><span>Команда</span></a>'+
-      '<a href="#list"><span class="shortcut-circle">'+icon('folder')+'</span><span>Мои объекты</span></a>':'')+'</div>';
+  const shortcuts=editing?'<div class="round-shortcuts profile-shortcuts" aria-label="Разделы кабинета">'+
+    '<a href="#crew"><span class="shortcut-circle">'+icon('person')+'</span><span>Команда</span></a>'+
+    '<a href="#list"><span class="shortcut-circle">'+icon('folder')+'</span><span>Мои объекты</span></a></div>':'';
   if(selectedWork){
     const fallback=new URLSearchParams(params);
     fallback.delete('work');
@@ -156,15 +157,7 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
     }
   };
   for(const shortcut of document.querySelectorAll('[data-profile-jump]'))shortcut.onclick=()=>{
-    const target=shortcut.dataset.profileJump;
-    if(target==='bid'){
-      const bid=document.querySelector('.bid-details');
-      bid.open=true;
-      bid.querySelector('summary').focus({preventScroll:true});
-      bid.scrollIntoView({block:'nearest'});
-      return;
-    }
-    const tab=[...switches].find(button=>button.dataset.section===target);
+    const tab=[...switches].find(button=>button.dataset.section===shortcut.dataset.profileJump);
     tab.click();
     tab.focus({preventScroll:true});
     tab.scrollIntoView({block:'nearest'});

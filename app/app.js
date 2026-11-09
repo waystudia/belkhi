@@ -1,4 +1,4 @@
-import {portfolio} from './portfolio.js?v=20261109-1';
+import {portfolio} from './portfolio.js?v=20261109-2';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';
@@ -416,7 +416,7 @@ function market(tenders,p,params){
 }
 async function workerScreen(page,id,params,seq){
   const savedProfile=myProfile();
-  const p=savedProfile||{id:portfolioOwner(),name:'Исполнитель',handle:currentIdentity()?.username,skills:[]};
+  const p=savedProfile||{id:portfolioOwner(),name:currentAuth()?.user?.user_metadata?.display_name||'Исполнитель',handle:currentIdentity()?.username,skills:[]};
   if(page==='worker'){
     if(!workerEnabled()){
       const tender=params.get('tender');
@@ -425,10 +425,7 @@ async function workerScreen(page,id,params,seq){
       return;
     }
     if(params.has('edit'))editProfile(savedProfile || {name: currentAuth()?.user?.user_metadata?.display_name});
-    else if(!savedProfile&&currentAuth()){
-      show(null,'Профиль исполнителя','<div class="worker-activation"><p>Заполните имя, город и специальность, чтобы отправлять отклики.</p>'+
-        link('worker?edit=1','Заполнить профиль','btn secondary')+'</div>','account');
-    }else await portfolio(p,p.id,true,portfolioUI,'',profileReturn||'market');
+    else await portfolio(p,p.id,true,portfolioUI,'',profileReturn||'market');
     return;
   }
   if(page==='manual'){
