@@ -1,4 +1,4 @@
-import {servicePlaces} from './service-places.js?v=20261109-1';
+import {serviceAreas,servicePlaces} from './service-places.js?v=20261111-1';
 import {portfolio} from './portfolio.js?v=20261109-4';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
@@ -516,6 +516,15 @@ function tenderRow(t, target, status, ownerVisible=false){
   const thumb=attachment?'<img src="'+objectURL(attachment)+'" alt="">':t.photo?img(t.photo,''):'<span class="tender-placeholder" aria-hidden="true">⌂</span>';
   return '<a class="tender-card" href="#'+esc(target)+'">'+thumb+'<div class="tender-details"><strong>'+esc(t.kind)+'</strong><span class="meta">'+esc(t.district)+' · '+esc(t.period)+'</span><div class="tender-price"><b>'+money(t.budget)+'</b><span class="tag">'+esc(status)+'</span></div>'+(ownerVisible?customerBadge(t):'')+'</div></a>';
 }
+function matchesTerritory(location,selected,region){
+  const key=value=>searchKey(value||'').replace(/^(?:г\.|с\.|п\.|город|село|пос[её]лок|станица)\s*/,'').replace(/[\s‐‑–—-]+/g,' ');
+  const actual=key(location);
+  if(actual===key(selected))return true;
+  const place=serviceAreas.find(place=>key(place.name)===actual);
+  if(!place)return false;
+  return selected===region||key(place.district)===key(selected);
+}
+
 function market(tenders,p,params){
   const grid=params.get('view')==='grid';
   const filter=params.get('tab')||(p.skills.length&&!grid?'По специальности':'Все');
@@ -527,14 +536,34 @@ function market(tenders,p,params){
     return t.winner==null && (filter==='Все' || p.skills.includes(t.kind));
   }).sort((a,b)=>b.created-a.created);
   const choices=key=>[...new Set(available.map(t=>t[key]).filter(Boolean))].sort();
+  const region='Чеченская Республика';
+  const geoTypes=[['region','Республика'],['district','Районы'],['city','Города'],['village','Сёла']];
+  const areaNames=new Set(servicePlaces);
+  const geoOptions=[{name:region,type:'region',district:''},...serviceAreas,
+    ...choices('district').filter(name=>!areaNames.has(name)).map(name=>({name,type:'city',district:''}))];
   const filters=`<form id="feed-filter">
     <div class="market-search-field">${icon('search')}<input type="search" name="query" id="tender-search" aria-label="Поиск объектов" placeholder="Город, вид работ или объект"></div>
     <button type="button" class="workspace-icon" id="filter-open" aria-haspopup="dialog" aria-label="Фильтры">${icon('filter')}<small hidden></small></button>
-    <dialog id="market-panel" aria-labelledby="filter-title"><h3 id="filter-title">Фильтры</h3>
-      <fieldset><legend>Города и районы</legend><div class="filter-cities">${choices('district').map(c=>'<label><input type="checkbox" name="city" value="'+esc(c)+'"> '+esc(c)+'</label>').join('')}</div></fieldset>
-      <label>Тип работ<select name="kind"><option value="">Все работы</option>${[...new Set([...kinds,...choices('kind')])].map(k=>'<option>'+esc(k)+'</option>').join('')}</select></label>
-      <div class="pair"><label>Бюджет от, ₽<input name="min" type="number" min="0"></label><label>До, ₽<input name="max" type="number" min="0"></label></div>
-      <div class="filter-actions"><button type="reset">Сбросить</button><button type="button" class="primary" id="filter-done">Готово</button></div>
+    <dialog id="market-panel" aria-labelledby="filter-title">
+      <div class="market-panel-head"><h3 id="filter-title">Фильтры</h3><button type="button" class="workspace-icon" id="filter-close" aria-label="Закрыть фильтры">×</button></div>
+      <div class="market-panel-content">
+      <fieldset class="market-geography"><legend>Где искать работу</legend>
+        <div class="market-geo-types" role="group" aria-label="Тип территории">
+          ${geoTypes.map(([type,title])=>`<label><input type="radio" name="geo_type" value="${type}" ${type==='region'?'checked':''}><span>${title}</span></label>`).join('')}
+        </div>
+        <div class="worker-search">${icon('search')}<input type="search" name="geo_query" aria-label="Найти территорию" placeholder="Название города, села или района" autocomplete="off"></div>
+        <div id="filter-selected" class="worker-picked" role="group" aria-label="Выбранные территории"></div>
+        <div class="market-geo-options" role="group" aria-label="Список территорий">
+          ${geoOptions.map(place=>`<label data-geo-type="${place.type}"><input type="checkbox" name="city" value="${esc(place.name)}" aria-label="${esc(place.name)}"><span><strong>${esc(place.name)}</strong><small>${esc(place.type==='region'?'Все населённые пункты республики':place.type==='district'?'Район · Чеченская Республика':place.district||({city:'Город',district:'Район',village:'Сельский населённый пункт'})[place.type])}</small></span></label>`).join('')}
+        </div>
+        <p id="filter-geo-empty" class="form-note" hidden>Ничего не найдено. Попробуйте другое название.</p>
+      </fieldset>
+      <fieldset class="market-work-kinds"><legend>Тип работ</legend><div class="chips">
+        ${['',...new Set([...kinds,...choices('kind')])].map(kind=>`<label><input type="radio" name="kind" value="${esc(kind)}" ${!kind?'checked':''}>${esc(kind||'Все работы')}</label>`).join('')}
+      </div></fieldset>
+      <div class="pair"><label>Бюджет от, ₽<input name="min" type="number" min="0" inputmode="numeric" placeholder="От"></label><label>До, ₽<input name="max" type="number" min="0" inputmode="numeric" placeholder="До"></label></div>
+      </div>
+      <div class="filter-actions"><button type="reset">Сбросить</button><button type="button" class="primary" id="filter-done">Показать тендеры</button></div>
     </dialog></form>`;
   const categories='<div class="round-shortcuts market-categories" data-gallery="market-categories" aria-label="Виды работ">'+
     marketCategories.map(([kind,photo,title])=>`<button type="button" data-kind="${kind}" aria-pressed="false">
@@ -555,26 +584,48 @@ function market(tenders,p,params){
   const restored=new FormData();
   for(const [key,value] of workspaceState()?.filters||[])restored.append(key,value);
   for(const control of form.querySelectorAll('[name]')){
-    if(control.type==='checkbox')control.checked=restored.getAll(control.name).includes(control.value);
+    if(['checkbox','radio'].includes(control.type)){if(restored.has(control.name))control.checked=restored.getAll(control.name).includes(control.value);}
     else if(restored.has(control.name))control.value=restored.get(control.name);
   }
   opener.onclick=()=>panel.showModal();
-  form.querySelector('#filter-done').onclick=()=>panel.close();
+  form.querySelector('#filter-done').onclick=form.querySelector('#filter-close').onclick=()=>panel.close();
+  const geography=[...panel.querySelectorAll('[data-geo-type]')];
+  const selected=panel.querySelector('#filter-selected');
+  selected.onclick=event=>{
+    const button=event.target.closest('[data-remove-place]');
+    if(!button)return;
+    const field=geography.map(row=>row.querySelector('input')).find(field=>field.value===button.dataset.removePlace);
+    field.checked=false;
+    results();
+    panel.querySelector('[name="geo_query"]').focus();
+  };
   function results(){
     const values=new FormData(form);
     const query=String(values.get('query')).trim().toLocaleLowerCase('ru');
     const cities=values.getAll('city');
     const kind=values.get('kind');
+    const geoQuery=searchKey(String(values.get('geo_query')||'')).replace(/[\s‐‑–—-]+/g,' ');
+    const geoType=values.get('geo_type')||'region';
+    let geoCount=0;
+    for(const row of geography){
+      const matches=row.dataset.geoType===geoType&&(!geoQuery||
+        searchKey(row.querySelector('input').value).replace(/[\s‐‑–—-]+/g,' ').includes(geoQuery));
+      row.hidden=!matches;
+      if(matches)geoCount++;
+    }
+    panel.querySelector('#filter-geo-empty').hidden=geoCount>0;
+    selected.innerHTML=cities.map(city=>'<button type="button" data-remove-place="'+esc(city)+'" aria-label="Убрать '+esc(city)+'">'+esc(city)+' <span aria-hidden="true">×</span></button>').join('');
     const count=cities.length+['kind','min','max'].filter(key=>values.get(key)).length;
     opener.setAttribute('aria-label',count?'Фильтры, выбрано '+count:'Фильтры');
     opener.querySelector('small').hidden=!count;
     opener.querySelector('small').textContent=count;
     for(const chip of chips)chip.setAttribute('aria-pressed',String(chip.dataset.kind===kind));
     const visible=relevant.filter(t=>(filter!==savedTab||saved.has(t.id))&&
-      (!cities.length||cities.includes(t.district))&&(!kind||t.kind===kind)&&
+      (!cities.length||cities.some(city=>matchesTerritory(t.district,city,region)))&&(!kind||t.kind===kind)&&
       (!values.get('min')||Number(t.budget)>=Number(values.get('min')))&&
       (!values.get('max')||Number(t.budget)<=Number(values.get('max')))&&
       [t.kind,t.district,t.description].join(' ').toLocaleLowerCase('ru').includes(query));
+    form.querySelector('#filter-done').textContent='Показать тендеры · '+visible.length;
     resultsNode.innerHTML=visible.map(t=>{
       if(grid)return marketTile(t,p);
       if(t.winner==null||filter===savedTab)return feedPost(t,p,saved.has(t.id));
@@ -586,7 +637,8 @@ function market(tenders,p,params){
       'Тендеры не найдены. Попробуйте другой запрос или измените фильтры.')+'</p>';
   }
   for(const chip of chips)chip.onclick=()=>{
-    form.elements.kind.value=form.elements.kind.value===chip.dataset.kind?'':chip.dataset.kind;
+    const next=form.elements.kind.value===chip.dataset.kind?'':chip.dataset.kind;
+    for(const radio of form.querySelectorAll('[name="kind"]'))radio.checked=radio.value===next;
     results();
   };
   resultsNode.onclick=event=>{
@@ -599,7 +651,7 @@ function market(tenders,p,params){
     else button.setAttribute('aria-pressed',String(saved.has(id)));
   };
   form.oninput=results;
-  form.onreset=()=>queueMicrotask(results);
+  form.onreset=()=>setTimeout(results,0);
   form.onsubmit=event=>event.preventDefault();
   results();
 }
