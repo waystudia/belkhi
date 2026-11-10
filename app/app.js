@@ -1,4 +1,4 @@
-import {serviceAreas,servicePlaces} from './service-places.js?v=20261111-1';
+import {serviceAreas,servicePlaces,serviceRegion,territoryIncludes} from './service-places.js?v=20261111-2';
 import {portfolio} from './portfolio.js?v=20261109-4';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
@@ -516,14 +516,6 @@ function tenderRow(t, target, status, ownerVisible=false){
   const thumb=attachment?'<img src="'+objectURL(attachment)+'" alt="">':t.photo?img(t.photo,''):'<span class="tender-placeholder" aria-hidden="true">⌂</span>';
   return '<a class="tender-card" href="#'+esc(target)+'">'+thumb+'<div class="tender-details"><strong>'+esc(t.kind)+'</strong><span class="meta">'+esc(t.district)+' · '+esc(t.period)+'</span><div class="tender-price"><b>'+money(t.budget)+'</b><span class="tag">'+esc(status)+'</span></div>'+(ownerVisible?customerBadge(t):'')+'</div></a>';
 }
-function matchesTerritory(location,selected,region){
-  const key=value=>searchKey(value||'').replace(/^(?:г\.|с\.|п\.|город|село|пос[её]лок|станица)\s*/,'').replace(/[\s‐‑–—-]+/g,' ');
-  const actual=key(location);
-  if(actual===key(selected))return true;
-  const place=serviceAreas.find(place=>key(place.name)===actual);
-  if(!place)return false;
-  return selected===region||key(place.district)===key(selected);
-}
 
 function market(tenders,p,params){
   const grid=params.get('view')==='grid';
@@ -536,8 +528,7 @@ function market(tenders,p,params){
     return t.winner==null && (filter==='Все' || p.skills.includes(t.kind));
   }).sort((a,b)=>b.created-a.created);
   const choices=key=>[...new Set(available.map(t=>t[key]).filter(Boolean))].sort();
-  const region='Чеченская Республика';
-  const geoTypes=[['region','Республика'],['district','Районы'],['city','Города'],['village','Сёла']];
+  const region=serviceRegion;
   const areaNames=new Set(servicePlaces);
   const geoOptions=[{name:region,type:'region',district:''},...serviceAreas,
     ...choices('district').filter(name=>!areaNames.has(name)).map(name=>({name,type:'city',district:''}))];
@@ -548,13 +539,10 @@ function market(tenders,p,params){
       <div class="market-panel-head"><h3 id="filter-title">Фильтры</h3><button type="button" class="workspace-icon" id="filter-close" aria-label="Закрыть фильтры">×</button></div>
       <div class="market-panel-content">
       <fieldset class="market-geography"><legend>Где искать работу</legend>
-        <div class="market-geo-types" role="group" aria-label="Тип территории">
-          ${geoTypes.map(([type,title])=>`<label><input type="radio" name="geo_type" value="${type}" ${type==='region'?'checked':''}><span>${title}</span></label>`).join('')}
-        </div>
         <div class="worker-search">${icon('search')}<input type="search" name="geo_query" aria-label="Найти территорию" placeholder="Название города, села или района" autocomplete="off"></div>
         <div id="filter-selected" class="worker-picked" role="group" aria-label="Выбранные территории"></div>
         <div class="market-geo-options" role="group" aria-label="Список территорий">
-          ${geoOptions.map(place=>`<label data-geo-type="${place.type}"><input type="checkbox" name="city" value="${esc(place.name)}" aria-label="${esc(place.name)}"><span><strong>${esc(place.name)}</strong><small>${esc(place.type==='region'?'Все населённые пункты республики':place.type==='district'?'Район · Чеченская Республика':place.district||({city:'Город',district:'Район',village:'Сельский населённый пункт'})[place.type])}</small></span></label>`).join('')}
+          ${geoOptions.map(place=>`<label data-geo-type="${place.type}"><input type="checkbox" name="city" value="${esc(place.name)}" aria-label="${esc(place.name)}"><span><strong>${esc(place.name)}</strong><small>${esc(place.type==='region'?'Все населённые пункты республики':place.type==='district'?'Район · Чеченская Республика':place.parent||place.district||({city:'Город',district:'Район',village:'Сельский населённый пункт'})[place.type])}</small></span></label>`).join('')}
         </div>
         <p id="filter-geo-empty" class="form-note" hidden>Ничего не найдено. Попробуйте другое название.</p>
       </fieldset>
@@ -600,16 +588,25 @@ function market(tenders,p,params){
     panel.querySelector('[name="geo_query"]').focus();
   };
   function results(){
+    const checked=geography.map(row=>row.querySelector('input')).filter(input=>input.checked);
+    for(const input of checked){
+      if(checked.some(parent=>parent!==input&&territoryIncludes(parent.value,input.value)))input.checked=false;
+    }
     const values=new FormData(form);
     const query=String(values.get('query')).trim().toLocaleLowerCase('ru');
     const cities=values.getAll('city');
     const kind=values.get('kind');
     const geoQuery=searchKey(String(values.get('geo_query')||'')).replace(/[\s‐‑–—-]+/g,' ');
-    const geoType=values.get('geo_type')||'region';
     let geoCount=0;
     for(const row of geography){
-      const matches=row.dataset.geoType===geoType&&(!geoQuery||
-        searchKey(row.querySelector('input').value).replace(/[\s‐‑–—-]+/g,' ').includes(geoQuery));
+      const input=row.querySelector('input');
+      const ancestor=cities.find(city=>city!==input.value&&territoryIncludes(city,input.value));
+      input.disabled=Boolean(ancestor);
+      const place=geoOptions.find(place=>place.name===input.value);
+      const description=place.type==='region'?'Все населённые пункты республики':
+        place.type==='district'?'Район · '+region:place.parent||place.district||({city:'Город',village:'Сельский населённый пункт'})[place.type];
+      row.querySelector('small').textContent=ancestor?'Уже включено: '+ancestor:description;
+      const matches=!geoQuery||searchKey(input.value).replace(/[\s‐‑–—-]+/g,' ').includes(geoQuery);
       row.hidden=!matches;
       if(matches)geoCount++;
     }
@@ -621,7 +618,7 @@ function market(tenders,p,params){
     opener.querySelector('small').textContent=count;
     for(const chip of chips)chip.setAttribute('aria-pressed',String(chip.dataset.kind===kind));
     const visible=relevant.filter(t=>(filter!==savedTab||saved.has(t.id))&&
-      (!cities.length||cities.some(city=>matchesTerritory(t.district,city,region)))&&(!kind||t.kind===kind)&&
+      (!cities.length||cities.some(city=>territoryIncludes(city,t.district)))&&(!kind||t.kind===kind)&&
       (!values.get('min')||Number(t.budget)>=Number(values.get('min')))&&
       (!values.get('max')||Number(t.budget)<=Number(values.get('max')))&&
       [t.kind,t.district,t.description].join(' ').toLocaleLowerCase('ru').includes(query));

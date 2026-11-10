@@ -208,22 +208,6 @@ body[data-surface="app"] #bottom-nav a:active { background: var(--mint); }
 #market-panel fieldset { min-width: 0; margin: 0; }
 #market-panel legend { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 .market-geography { display: grid; gap: 8px; }
-.market-geo-types { display: flex; gap: 4px; background: var(--workspace-field); border-radius: 9px; padding: 3px; }
-#market-panel .market-geo-types label {
-  flex: 1;
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-height: 36px;
-  margin: 0;
-  padding: 2px;
-  border-radius: 6px;
-  font-size: 11px;
-  cursor: pointer;
-}
-.market-geo-types input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.market-geo-types label:has(:checked) { background: white; color: var(--green); }
-.market-geo-types label:focus-within { outline: 2px solid var(--green); }
 #market-panel .worker-search input { width: 100%; margin: 0; padding-left: 34px; background: var(--workspace-field); border-color: transparent; }
 .market-geo-options { max-height: 152px; overflow-y: auto; border: 1px solid var(--workspace-rule); border-radius: 9px; overscroll-behavior: contain; }
 #market-panel .market-geo-options label {
@@ -239,6 +223,8 @@ body[data-surface="app"] #bottom-nav a:active { background: var(--mint); }
 #market-panel .market-geo-options label[hidden], #filter-geo-empty[hidden] { display: none; }
 .market-geo-options label:last-child { border: 0; }
 .market-geo-options label:has(:checked) { background: var(--mint); }
+.market-geo-options label:has(:disabled) { background: var(--workspace-field); cursor: not-allowed; }
+.market-geo-options label:has(:disabled) strong { color: var(--muted); }
 .market-geo-options input { width: 16px; height: 16px; flex: none; margin: 0; accent-color: var(--green); }
 .market-geo-options strong, .market-geo-options small { display: block; overflow-wrap: anywhere; }
 .market-geo-options strong { font-size: 12px; }
