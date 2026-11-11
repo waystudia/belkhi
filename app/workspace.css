@@ -668,3 +668,14 @@ body[data-surface="app"]:has(#worker-profile) { min-height: 100dvh; }
   #screen[data-page="customer"] > h1 { font-size: 16px; }
   #screen .customer-settings .settings-pair { grid-template-columns: minmax(0,1fr); }
 }
+
+/* One application shell: the embedded CRM owns its internal sections only. */
+body[data-surface="app"] .layout:has(.unified-crm-host){max-width:1440px;width:100%}
+body[data-surface="app"] main.unified-crm-host{padding:0;overflow:hidden}
+#crm-workspace{display:block;width:100%;height:calc(100dvh - 122px);min-height:420px;border:0;background:#fff}
+@media(min-width:1000px){#crm-workspace{height:calc(100dvh - 132px);min-height:600px}}
+@media(min-width:800px){
+ body[data-surface="app"]:has(.unified-crm-host){--workspace-width:min(1120px, calc(100vw - 180px))}
+ body[data-surface="app"] .layout:has(.unified-crm-host){max-width:calc(var(--workspace-width) + var(--workspace-rail));padding-left:var(--workspace-rail)}
+ #crm-workspace{height:calc(100dvh - 58px);min-height:600px}
+}

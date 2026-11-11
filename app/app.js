@@ -1,3 +1,4 @@
+import {mountUnifiedCRM} from './unified-crm.js?v=20261111-crm-1';
 import {serviceAreas,servicePlaces,serviceRegion,territoryIncludes} from './service-places.js?v=20261111-2';
 import {portfolio} from './portfolio.js?v=20261109-4';
 import {crm,progress} from './crm.js';
@@ -81,7 +82,7 @@ function bottomNav(page, params){
     ['market','Лента','home'],
     ['market?view=grid','Поиск','search'],
     ['new','Создать тендер','add'],
-    customerMode?['list','Мои объекты','folder']:['works','Работы','helmet'],
+    ['works','Работы','helmet'],
     [activeProfile(),'Профиль','person']
   ];
   const active = page==='market' && params.get('view')==='grid' ? 'market?view=grid'
@@ -192,6 +193,7 @@ function show(step,title,body,back=''){
   const heading=back
     ? '<div class="screen-heading"><a href="#'+esc(back)+'" aria-label="Назад" title="Назад"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></a><h1>'+esc(title)+'</h1></div>'
     : '<h1>'+esc(title)+'</h1>';
+  screen.classList.remove('unified-crm-host');
   screen.dataset.page=page;
   screen.innerHTML=heading+body;
   document.querySelector('#steps').innerHTML=steps.map((v,i)=>'<li class="'+(i===step?'active':'')+'"><span class="num">'+(i+1)+'</span>'+v+'</li>').join('');
@@ -701,26 +703,10 @@ async function workerScreen(page,id,params,seq){
     const sorted=all.sort((a,b)=>b.created-a.created);
     const jobs=sorted.filter(t=>String(t.winner)===p.id);
     const offers=sorted.filter(t=>myBid(t,p)&&String(t.winner)!==p.id);
-    const workCard=t=>{
-      const state=progress(t.plan||[]),percent=state.total?Math.round(state.done/state.total*100):0;
-      const currentStage=(t.plan||[]).find(stage=>progress([stage]).done<(stage.tasks||[]).length);
-      const status=state.total&&state.done===state.total?'Завершён':currentStage?'В работе':'Нужен план';
-      const title=String(t.kind||'Объект').replace(/^Демо · /,'');
-      const next=currentStage?'Сейчас · '+currentStage.name:state.total?'Все задачи выполнены':'Добавьте этапы и задачи';
-      return '<a class="work-card" href="#crm/'+encodeURIComponent(t.id)+'">'+
-        '<span class="work-cover">'+(t.photo?img(t.photo,title):'<span>⌂</span>')+'</span>'+
-        '<span class="work-content"><span class="work-title"><strong>'+esc(title)+'</strong><small>'+status+'</small></span>'+
-        '<span class="work-meta">'+esc(t.district)+' · '+esc(t.period||'Срок не указан')+'</span>'+
-        '<span class="work-current">'+esc(next)+'</span><progress max="100" value="'+percent+'"></progress>'+
-        '<span class="work-progress"><small>'+state.done+' из '+state.total+' задач</small><b>'+percent+'%</b></span></span></a>';
-    };
-    const visibleJobs=[...jobs].sort((a,b)=>Number(b.demo)-Number(a.demo)||b.created-a.created);
-    show(null,'Работы',
-      '<div class="works-intro"><p>Управляйте этапами, задачами и командой на каждом объекте.</p>'+link('manual','＋ Объект','btn secondary pill works-add')+'</div>'+
-      '<section class="works-section"><div class="works-section-head"><h3>В работе</h3><span>'+visibleJobs.length+'</span></div>'+
-      (visibleJobs.map(workCard).join('')||'<div class="works-empty"><b>Объектов пока нет</b><small>Выигранные заказы и свои проекты появятся здесь.</small></div>')+'</section>'+
-      '<details class="fold works-offers"><summary>Отправленные отклики <small>'+offers.length+' предложений</small></summary><div>'+
-      (offers.map(t=>link('sent/'+t.id,t.kind+' · '+(t.winner==null?'На рассмотрении':'Тендер закрыт'),'project')).join('')||'<p class="muted">Вы ещё не откликались на тендеры.</p>')+'</div></details>');return
+    show(null,'Работы','');
+    screen.classList.add('unified-crm-host');
+    mountUnifiedCRM(screen,{jobs,people:teamMembers(p),offers:offers.map(t=>({id:t.id,name:t.kind,status:t.winner==null?'На рассмотрении':'Тендер закрыт'}))});
+    return;
   }
   if(page==='market'){const all=await records('readonly',s=>s.getAll());if(seq===generation)market(all,p,params);return}
   const t=await records('readonly',s=>s.get(id));if(seq!==generation)return;

@@ -1,0 +1,51 @@
+/* Shared compact visual language for the app and the CRM. */
+:root {
+  --brand-green: #008449;
+  --green: var(--brand-green);
+  --ink: #192922;
+  --muted: #5c6962;
+  --line: #e2e8e3;
+  --mint: #e8f4ed;
+  --field: #f5f7f5;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --control-radius: 8px;
+  --control-height: 40px;
+  --type-body: 14px;
+  --type-sm: 12px;
+  --type-title: 18px;
+}
+body {
+  font-family: "Golos Text", system-ui, sans-serif;
+  font-size: var(--type-body);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+body[data-surface="app"] :is(button, .btn, input, select, textarea) {
+  font-family: inherit;
+}
+body[data-surface="app"]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select,
+    textarea
+  ) {
+  border-radius: var(--control-radius);
+}
+body[data-surface="app"]
+  :is(button, .btn):not(.workspace-icon):not(.round-shortcuts *):not(
+    .profile-shortcuts *
+  ) {
+  font-size: 13px;
+}
+body[data-surface="app"] :is(label, .fieldlabel) {
+  font-size: 13px;
+}
+@media (max-width: 799px) {
+  body[data-surface="app"]
+    :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    font-size: 16px;
+  }
+}
