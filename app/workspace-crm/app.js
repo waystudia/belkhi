@@ -97,6 +97,11 @@ const icon = (name) =>
   '"/></svg>';
 const avatar = (id) => {
   const member = person(id);
+  if (
+    member?.photo?.url &&
+    /^data:image\/(jpeg|png|webp);base64,/.test(member.photo.url)
+  )
+    return '<img class="avatar" src="' + esc(member.photo.url) + '" alt="">';
   return (
     '<span class="avatar ' +
     esc(member?.color || "slate") +
@@ -207,7 +212,7 @@ function projectSelect() {
   );
 }
 function toolBar(extra = "") {
-  return '<div class="toolbar">' + projectSelect() + extra + "</div>";
+  return extra ? '<div class="toolbar">' + extra + "</div>" : "";
 }
 function taskRow(task, showProject = true) {
   const member = person(task.assignee);
@@ -300,135 +305,59 @@ function attention() {
 }
 function projectsView() {
   const items = state.projects.filter(
-    (item) =>
-      (!projectFilter || item.id === projectFilter) &&
-      (item.name + " " + item.place)
+    (p) =>
+      (!projectFilter || p.id === projectFilter) &&
+      (p.name + " " + p.place)
         .toLocaleLowerCase("ru")
         .includes(query.toLocaleLowerCase("ru")),
   );
-  return (
-    toolBar() +
-    '<div class="objects-layout"><section class="object-list" aria-label="Объекты">' +
-    (items
-      .map((item) => {
-        const next =
-          projectTasks(item.id).find((task) => task.status === "review") ||
-          projectTasks(item.id).find((task) => task.status !== "done");
-        const documents = state.documents.filter(
-          (doc) => doc.project === item.id,
-        );
-        return (
-          '<article class="object-card"><button class="object-heading" data-project="' +
-          item.id +
-          '"><img src="../media/' +
-          item.image +
-          '.jpg" alt="' +
-          esc(item.name) +
-          '"><span><strong>' +
-          esc(item.name) +
-          "</strong><small>" +
-          esc(item.place) +
-          " · До " +
-          date(item.due) +
-          '</small><span class="object-stage">' +
-          esc(item.phase) +
-          "</span></span>" +
-          icon("arrow") +
-          '</button><div class="object-body">' +
-          progressBar(item.id) +
-          '<div class="object-footer"><span>' +
-          avatar(item.manager) +
-          "<span>" +
-          esc(person(item.manager)?.name) +
-          '<small>Ответственный</small></span></span><button class="text-button" data-project="' +
-          item.id +
-          '" data-project-tab="documents">' +
-          icon("file") +
-          documents.length +
-          " док.</button></div>" +
-          (next
-            ? '<div class="object-next"><small>Ближайшее дело</small>' +
-              smallTask(next) +
-              "</div>"
-            : '<p class="muted">Все задачи выполнены.</p>') +
-          "</div></article>"
-        );
-      })
-      .join("") || empty("Объектов по этому запросу нет.")) +
-    "</section>" +
-    attention() +
-    "</div>"
-  );
+  return `<div class="objects-layout"><section class="object-list" aria-label="Объекты">
+    <div class="object-table-head"><span>Объект</span><span>Этап</span><span>Ответственный</span><span>Прогресс</span><span>Срок</span></div>
+    ${
+      items
+        .map(
+          (p) => `<article class="object-card">
+      <button class="object-heading" data-project="${esc(p.id)}"><img src="../media/${esc(p.image)}.jpg" alt=""><span><strong>${esc(p.name)}</strong><small>${esc(p.place)}${p.demo ? " · Демо" : ""}</small><span class="mobile-phase">${esc(p.phase)}</span></span></button>
+      <span class="object-phase">${esc(p.phase)}</span>
+      <button class="object-manager" data-project="${esc(p.id)}" data-project-tab="people">${avatar(p.manager)}<span>${esc(person(p.manager)?.name || "Не назначен")}</span></button>
+      <div class="object-progress">${progressBar(p.id)}</div>
+      <span class="object-due">${icon("calendar")}${date(p.due)}</span>
+    </article>`,
+        )
+        .join("") || empty("Объектов по этому запросу нет.")
+    }</section>${attention()}${activeTasks().some((t) => t.status === "review") || state.documents.some((d) => d.status === "waiting" && (!projectFilter || d.project === projectFilter)) ? `<button class="attention-trigger" data-action="attention">${icon("clock")}<strong>Требует внимания</strong><span>${activeTasks().filter((t) => t.status === "review").length + state.documents.filter((d) => d.status === "waiting" && (!projectFilter || d.project === projectFilter)).length}</span>${icon("arrow")}</button>` : ""}</div>`;
+}
+function weekStrip() {
+  const current = new Date(day + "T12:00:00Z");
+  const monday = new Date(current);
+  monday.setUTCDate(current.getUTCDate() - ((current.getUTCDay() + 6) % 7));
+  return `<div class="week-strip"><button class="icon-button" data-day="-7" aria-label="Предыдущая неделя">${icon("back")}</button>${Array.from(
+    { length: 7 },
+    (_, i) => {
+      const d = new Date(monday);
+      d.setUTCDate(d.getUTCDate() + i);
+      const value = d.toISOString().slice(0, 10);
+      return `<button data-date="${value}" aria-pressed="${value === day}"><span>${["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][i]}</span><small>${d.getUTCDate()}</small></button>`;
+    },
+  ).join(
+    "",
+  )}<button class="icon-button" data-day="7" aria-label="Следующая неделя">${icon("arrow")}</button></div>`;
+}
+function taskPhoto(t) {
+  const url = t.upload?.url || (t.photo ? "../media/" + t.photo + ".jpg" : "");
+  return url
+    ? `<img src="${esc(url)}" alt="Фотоотчёт задачи" loading="lazy">`
+    : "";
 }
 function dayView() {
   const tasks = activeTasks()
-    .filter((task) => task.due === day && task.status !== "done")
-    .sort(
-      (a, b) =>
-        (a.status === "review" ? -1 : 0) - (b.status === "review" ? -1 : 0) ||
-        a.time.localeCompare(b.time),
-    );
-  const done = activeTasks().filter(
-    (task) => task.due === day && task.status === "done",
-  ).length;
-  return (
-    toolBar(
-      '<div class="day-picker"><button class="icon-button" data-day="-1" aria-label="Предыдущий день">' +
-        icon("back") +
-        "</button><span>" +
-        fullDate(day) +
-        '</span><button class="icon-button" data-day="1" aria-label="Следующий день">' +
-        icon("arrow") +
-        "</button></div>",
-    ) +
-    '<div class="day-layout"><section class="day-plan panel">' +
-    sectionTitle(
-      "План на " + fullDate(day),
-      '<span class="muted">' + taskCount(tasks.length) + "</span>",
-    ) +
-    '<div class="daily-summary"><strong>' +
-    tasks.length +
-    "</strong><span>осталось на сегодня<br><small>" +
-    done +
-    " выполнено за этот день</small></span></div>" +
-    (tasks
-      .map(
-        (task) =>
-          '<div class="schedule-row"><span class="schedule-time">' +
-          esc(task.time) +
-          '</span><div class="schedule-item"><button class="schedule-task" data-task="' +
-          task.id +
-          '">' +
-          "<strong>" +
-          esc(task.name) +
-          "</strong><small>" +
-          esc(project(task.project)?.name) +
-          " · " +
-          esc(person(task.assignee)?.name || "Не назначен") +
-          "</small>" +
-          '<span class="schedule-result">' +
-          status(task) +
-          "<span>" +
-          esc(
-            task.type === "Количество"
-              ? (task.amount || 0) + " / " + task.target + " " + task.unit
-              : task.type === "Фото"
-                ? "Фотоотчёт"
-                : task.type === "Текст"
-                  ? "Комментарий"
-                  : "Отметка выполнения",
-          ) +
-          "</span></span></button></div></div>",
-      )
-      .join("") ||
-      empty(
-        "На этот день нет открытых задач. Перейдите к другому дню или добавьте задачу.",
-      )) +
-    '</section><aside class="day-aside">' +
-    attention() +
-    journalView(4) +
-    "</aside></div>"
-  );
+    .filter((t) => t.due === day)
+    .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  return `<div class="day-layout"><section class="day-plan">
+    <div class="date-line">${icon("calendar")}<label><span class="sr-only">Дата плана</span><input id="plan-date" type="date" value="${day}"></label><span class="muted">${taskCount(tasks.length)}</span><button class="primary day-mobile-action" data-action="new-task">${icon("plus")} Задача</button></div>
+    ${weekStrip()}
+    ${tasks.map((t) => `<button class="schedule-row" data-task="${esc(t.id)}"><span class="task-state ${t.status}">${t.status === "done" ? icon("check") : ""}</span><time class="schedule-time">${esc(t.time || "—")}</time><span class="schedule-item"><strong>${esc(t.name)}</strong><small>${icon("people")}${esc(person(t.assignee)?.name || "Не назначен")}</small><small>${icon("home")}${esc(project(t.project)?.name)}</small></span><span class="schedule-result">${status(t)}${taskPhoto(t) || `<small>${icon("photo")} Фотоотчёт</small>`}</span></button>`).join("") || empty("На этот день задач нет. Выберите другой день или добавьте задачу.")}
+    </section><aside class="day-aside">${journalView(4)}<button class="text-button" data-day-tab="journal">Все записи ${icon("arrow")}</button></aside></div>`;
 }
 function boardView() {
   const tasks = activeTasks();
@@ -548,7 +477,7 @@ function teamView() {
       "Работники",
       '<span class="muted">' + members.length + " человек</span>",
     ) +
-    '<div class="roster-header"><span>Работник</span><span>Задачи и объекты</span><span>Загрузка</span></div>' +
+    '<div class="roster-header"><span>Работник</span><span>Объект</span><span>Загрузка</span></div>' +
     (members
       .map((member) => {
         const assigned = tasks.filter((task) => task.assignee === member.id);
@@ -566,16 +495,18 @@ function teamView() {
           esc(member.role) +
           "</small></span></button>" +
           '<div class="person-tasks">' +
-          (assigned
+          ([...new Set(assigned.map((t) => t.project))]
             .map(
-              (task) =>
-                '<button data-task="' +
-                task.id +
+              (id) =>
+                '<button data-project="' +
+                esc(id) +
                 '">' +
-                esc(task.name) +
+                icon("home") +
+                " " +
+                esc(project(id)?.name) +
                 "</button>",
             )
-            .join("") || '<span class="muted">Можно назначить задачу</span>') +
+            .join("") || '<span class="muted">Без объекта</span>') +
           "<small>" +
           esc(locations.join(" · ")) +
           "</small></div>" +
@@ -591,40 +522,19 @@ function teamView() {
               (index < assigned.length ? "filled" : "") +
               '"></i>',
           ).join("") +
-          '</div><button class="text-button" data-action="new-task" data-assignee="' +
+          '</div><button class="text-button" data-assign="' +
           member.id +
           '">Назначить</button></div></article>'
         );
       })
       .join("") || empty("Работников с такой загрузкой нет.")) +
-    '</section><aside class="team-side">' +
-    sectionTitle("По объектам") +
-    state.projects
-      .map((item) => {
-        const assigned = tasks.filter((task) => task.project === item.id);
-        const count = new Set(
-          assigned.map((task) => task.assignee).filter(Boolean),
-        ).size;
-        return (
-          '<button class="crew-project" data-project="' +
-          item.id +
-          '"><span><strong>' +
-          esc(item.name) +
-          "</strong><small>" +
-          count +
-          " " +
-          plural(count, "работник", "работника", "работников") +
-          " · " +
-          taskCount(assigned.length) +
-          "</small></span>" +
-          icon("arrow") +
-          "</button>"
-        );
-      })
-      .join("") +
+    '</section><aside class="team-side panel">' +
+    sectionTitle("Назначение задачи") +
+    assignmentForm("", true) +
     "</aside></div>"
   );
 }
+
 function documentsView() {
   const contracts = state.documents.filter(
     (doc) =>
@@ -663,7 +573,13 @@ function documentsView() {
     money(paid) +
     "</strong></div><div><span>Осталось получить</span><strong>" +
     money(sum - paid) +
-    "</strong></div></div>" +
+    '</strong></div><div class="finance-progress"><span>Оплаты по договорам<b>' +
+    (sum ? Math.round((paid / sum) * 100) : 0) +
+    '%</b></span><progress aria-label="Оплаты по договорам" value="' +
+    paid +
+    '" max="' +
+    Math.max(1, sum) +
+    '"></progress></div></div>' +
     '<div class="documents-layout"><section class="document-ledger panel">' +
     sectionTitle(
       "Документы",
@@ -700,59 +616,23 @@ function documentsView() {
           "</span></button>",
       )
       .join("") || empty("Документов по этому запросу нет.")) +
-    '</section><aside class="payment-plan panel">' +
-    sectionTitle("Расчёты по объектам") +
-    contracts
-      .map(
-        (doc) =>
-          '<div class="payment-item"><button data-document="' +
-          doc.id +
-          '">' +
-          esc(project(doc.project)?.name) +
-          icon("arrow") +
-          '</button><progress aria-label="Оплаченная часть" max="' +
-          Math.max(1, doc.amount) +
-          '" value="' +
-          doc.paid +
-          '"></progress><div><span>' +
-          money(doc.paid) +
-          "</span><small>из " +
-          money(doc.amount) +
-          "</small></div></div>",
-      )
-      .join("") +
+    '</section><aside class="paper-preview">' +
+    (rows.length
+      ? `<div class="document-paper"><span class="paper-mark">${icon("file")} ${esc(rows[0].kind)}</span><h3>${esc(rows[0].name)}</h3><dl><div><dt>Объект</dt><dd>${esc(project(rows[0].project)?.name)}</dd></div><div><dt>Дата документа</dt><dd>${fullDate(rows[0].date)}</dd></div>${rows[0].kind === "Договор" ? `<div><dt>Сумма договора</dt><dd>${money(rows[0].amount)}</dd></div>` : ""}</dl><button class="secondary" data-document="${esc(rows[0].id)}">Открыть документ ${icon("arrow")}</button></div>`
+      : empty("Здесь появится карточка документа.")) +
     "</aside></div>"
   );
 }
+
 function journalView(limit = 8) {
-  return (
-    '<section class="journal panel">' +
-    sectionTitle("Журнал работ") +
-    state.journal
-      .filter(
-        (item) =>
-          (!projectFilter || item.project === projectFilter) &&
-          (!query || item.text.toLowerCase().includes(query.toLowerCase())),
-      )
-      .slice(0, limit)
-      .map(
-        (item) =>
-          '<div><span class="journal-dot"></span><p>' +
-          (item.photo
-            ? '<img class="journal-photo" src="' +
-              esc(item.photo.url) +
-              '" alt="Фото записи">'
-            : "") +
-          esc(item.text) +
-          "<small>" +
-          esc(item.at) +
-          " · " +
-          esc(project(item.project)?.name || "Команда") +
-          "</small></p></div>",
-      )
-      .join("") +
-    "</section>"
-  );
+  const entries = state.journal
+    .filter(
+      (j) =>
+        (!projectFilter || j.project === projectFilter) &&
+        (!query || j.text.toLowerCase().includes(query.toLowerCase())),
+    )
+    .slice(0, limit);
+  return `<section class="journal panel">${sectionTitle("Журнал работ")}${entries.map((j) => `<div><p>${j.photo ? `<img class="journal-photo" src="${esc(j.photo.url)}" alt="Фото записи">` : ""}<small class="journal-time">${esc(j.at)}</small>${esc(j.text)}<small>${icon("home")} ${esc(project(j.project)?.name || "Команда")}</small></p></div>`).join("") || empty("Пока нет записей. Добавьте первый отчёт о работе.")}</section>`;
 }
 function tasksView() {
   const tasks = activeTasks();
@@ -816,6 +696,7 @@ function currentContent() {
 function render() {
   document.title = "Работы · Белхи";
   document.body.dataset.variant = "1";
+  document.body.dataset.section = view;
   const action =
     view === "projects"
       ? ["Объект", "new-project"]
@@ -825,7 +706,9 @@ function render() {
           ? ["Документ", "new-document"]
           : ["Задача", "new-task"];
   root.innerHTML =
-    '<div class="crm-shell"><header class="crm-heading"><h1>Работы</h1><span class="local-label">На этом устройстве</span><button class="icon-button" data-menu aria-label="Все разделы CRM">' +
+    '<div class="crm-shell"><header class="crm-heading"><h1>Работы</h1>' +
+    projectSelect() +
+    '<button class="icon-button" data-menu aria-label="Все разделы CRM">' +
     icon("more") +
     '</button></header><nav class="crm-nav" aria-label="Разделы CRM">' +
     nav
@@ -843,16 +726,30 @@ function render() {
       )
       .join("") +
     '</nav><main class="crm-content"><div class="page-title"><h2>' +
-    nav.find((n) => n[0] === view)[1] +
+    {
+      projects: "Объекты",
+      day: "Дела на сегодня",
+      tasks: "Доска задач",
+      team: "Команда и загрузка",
+      documents: "Документы и оплаты",
+    }[view] +
     "</h2>" +
     primary(...action) +
     '</div><div class="search-row"><label class="search">' +
     icon("search") +
-    '<span class="sr-only">Поиск в разделе</span><input id="workspace-search" type="search" placeholder="Название или человек" value="' +
+    '<span class="sr-only">Поиск в разделе</span><input id="workspace-search" type="search" placeholder="' +
+    {
+      projects: "Поиск по объектам",
+      day: "Поиск задач",
+      tasks: "Поиск задач",
+      team: "Поиск по сотрудникам",
+      documents: "Поиск по документам",
+    }[view] +
+    '" value="' +
     esc(query) +
     '"></label></div><div id="work-content">' +
     currentContent() +
-    '</div><p class="crm-storage-note">Данные сохраняются в этом браузере. Облачная синхронизация не подключена.</p></main></div>';
+    '</div><details class="crm-storage-note"><summary>Хранение данных</summary><p>Данные сохраняются в этом браузере. Облачная синхронизация не подключена.</p></details></main></div>';
   document.querySelector("#workspace-search").oninput = (e) => {
     query = e.target.value;
     renderContent();
@@ -945,13 +842,7 @@ function closePanel() {
   }
 }
 function panelHeader(title) {
-  return (
-    '<div class="detail-heading"><h2 id="detail-title" tabindex="-1">' +
-    esc(title) +
-    '</h2><button class="icon-button" data-close-panel aria-label="Закрыть">' +
-    icon("close") +
-    "</button></div>"
-  );
+  return `<div class="detail-heading"><button class="icon-button" data-close-panel aria-label="Назад">${icon("back")}</button><h2 id="detail-title" tabindex="-1">${esc(title)}</h2></div>`;
 }
 function options(items, value) {
   return items
@@ -995,6 +886,20 @@ function taskForm(task = {}, assigned = "") {
       )
       .join("") +
     "</select></label></div>" +
+    '<fieldset class="priority-field"><legend>Приоритет</legend><div class="priority-choices">' +
+    ["Низкий", "Обычный", "Высокий"]
+      .map(
+        (v) =>
+          '<label><input type="radio" name="priority" value="' +
+          v +
+          '" ' +
+          ((task.priority || "Обычный") === v ? "checked" : "") +
+          ">" +
+          v +
+          "</label>",
+      )
+      .join("") +
+    "</div></fieldset>" +
     '<label>Примечание<textarea name="note" rows="2" maxlength="1000">' +
     esc(task.note) +
     "</textarea></label>" +
@@ -1043,6 +948,7 @@ function projectPanel(item) {
     [
       ["tasks", "Задачи", tasks.length],
       ["people", "Команда", workers.length],
+      ["photos", "Фото", tasks.filter((t) => t.upload || t.photo).length],
       [
         "documents",
         "Документы",
@@ -1068,40 +974,57 @@ function projectPanel(item) {
     (tab === "tasks"
       ? tasks.map((task) => taskRow(task, false)).join("") ||
         empty("Пока нет задач.")
-      : tab === "people"
-        ? workers
+      : tab === "photos"
+        ? '<div class="project-gallery">' +
+          (tasks
+            .filter((t) => t.upload || t.photo)
             .map(
-              (id) =>
-                '<button class="person-detail-row" data-person="' +
-                id +
+              (t) =>
+                '<button data-task="' +
+                esc(t.id) +
                 '">' +
-                avatar(id) +
-                "<span><strong>" +
-                esc(person(id)?.name) +
-                "</strong><small>" +
-                esc(person(id)?.role) +
-                "</small></span>" +
-                icon("arrow") +
-                "</button>",
+                taskPhoto(t) +
+                "<span>" +
+                esc(t.name) +
+                "</span></button>",
             )
-            .join("") || empty("Пока никто не назначен.")
-        : state.documents
-            .filter((doc) => doc.project === item.id)
-            .map(
-              (doc) =>
-                '<button class="attention-row" data-document="' +
-                doc.id +
-                '">' +
-                icon("file") +
-                "<span><strong>" +
-                esc(doc.name) +
-                "</strong><small>" +
-                (doc.status === "waiting" ? "Ожидается" : "Получен") +
-                "</small></span>" +
-                icon("arrow") +
-                "</button>",
-            )
-            .join("") || empty("Документов пока нет.")) +
+            .join("") ||
+            empty("Фото появятся после добавления отчёта к задаче.")) +
+          "</div>"
+        : tab === "people"
+          ? workers
+              .map(
+                (id) =>
+                  '<button class="person-detail-row" data-person="' +
+                  id +
+                  '">' +
+                  avatar(id) +
+                  "<span><strong>" +
+                  esc(person(id)?.name) +
+                  "</strong><small>" +
+                  esc(person(id)?.role) +
+                  "</small></span>" +
+                  icon("arrow") +
+                  "</button>",
+              )
+              .join("") || empty("Пока никто не назначен.")
+          : state.documents
+              .filter((doc) => doc.project === item.id)
+              .map(
+                (doc) =>
+                  '<button class="attention-row" data-document="' +
+                  doc.id +
+                  '">' +
+                  icon("file") +
+                  "<span><strong>" +
+                  esc(doc.name) +
+                  "</strong><small>" +
+                  (doc.status === "waiting" ? "Ожидается" : "Получен") +
+                  "</small></span>" +
+                  icon("arrow") +
+                  "</button>",
+              )
+              .join("") || empty("Документов пока нет.")) +
     "</div>"
   );
 }
@@ -1111,7 +1034,7 @@ function documentPanel(doc) {
     panelHeader(doc.name) +
     '<div class="detail-body"><div class="document-paper"><span class="paper-mark">' +
     icon("file") +
-    " Белхи · Демо</span><h3>" +
+    " Белхи</span><h3>" +
     esc(doc.kind) +
     "</h3><p>" +
     esc(doc.name) +
@@ -1150,14 +1073,16 @@ function newDocumentForm() {
     panelHeader("Добавить документ") +
     '<div class="detail-body"><form id="document-form"><label>Название<input name="name" required maxlength="120" placeholder="Например, акт по фундаменту"></label><label>Объект<select name="project" aria-label="Объект">' +
     options(state.projects, projectFilter) +
-    '</select></label><label>Тип<select name="kind" aria-label="Тип"><option>Договор</option><option>Акт</option><option>Смета</option></select></label><label>Сумма договора, ₽<input name="amount" type="number" min="0" max="1000000000" value="0" required></label><p class="form-note">Документ сохранится на этом устройстве.</p><div class="form-actions"><button class="primary">Добавить документ</button></div></form></div>'
+    '</select></label><label>Тип<select name="kind" aria-label="Тип"><option>Договор</option><option>Акт</option><option>Смета</option></select></label><label>Сумма договора, ₽<input name="amount" type="number" min="0" max="1000000000" value="0" required></label><label>Дата документа<input type="date" name="date" required value="' +
+    snapshotDate +
+    '"></label><p class="form-note">Документ сохранится на этом устройстве.</p><div class="form-actions"><button class="primary">Добавить документ</button></div></form></div>'
   );
 }
 function paintPanel() {
   const [route, param = ""] = location.hash.slice(1).split("=");
   const id = decodeURIComponent(param.split("?")[0]);
   let body = "";
-  if (route === "task") {
+  if (route === "edit-task") {
     const task = state.tasks.find((item) => item.id === id);
     if (task)
       body =
@@ -1206,7 +1131,9 @@ function paintPanel() {
   if (route === "new-person")
     body =
       panelHeader("Добавить работника") +
-      '<div class="detail-body"><form id="person-form"><label>Имя и фамилия<input name="name" required maxlength="70"></label><label>Специальность<input name="role" required maxlength="70" placeholder="Например, штукатур"></label><p class="form-note">Работник будет доступен для назначения на задачи.</p><div class="form-actions"><button class="primary">Добавить работника</button></div></form></div>';
+      '<div class="detail-body"><form id="person-form"><label>Имя и фамилия<input name="name" required maxlength="70"></label><label>Специальность<input name="role" required maxlength="70" placeholder="Например, штукатур"></label>' +
+      inputFile("Фото работника", "photo", "image/jpeg,image/png,image/webp") +
+      '<p class="form-note">Работник будет доступен для назначения на задачи.</p><div class="form-actions"><button class="primary">Добавить работника</button></div></form></div>';
   if (route === "new-project")
     body =
       panelHeader("Новый объект") +
@@ -1220,6 +1147,10 @@ function paintPanel() {
       panelHeader("Сбросить демоданные?") +
       '<div class="detail-body"><p>Все изменения в пяти вариантах будут заменены исходными примерами.</p><div class="form-actions"><button class="secondary" data-close-panel>Отмена</button><button class="primary" data-reset-confirm>Сбросить демо</button></div></div>';
   body = extendPanel(route, id, body);
+  detail.dataset.presentation = ["menu", "status", "payment"].includes(route)
+    ? "sheet"
+    : "page";
+  detail.dataset.route = route;
   if (body) {
     detail.innerHTML = body;
     if (!detail.open) detail.showModal();
@@ -1250,6 +1181,17 @@ function commitChange(message) {
   notify(message);
 }
 document.addEventListener("change", (event) => {
+  if (event.target.id === "plan-date") {
+    if (event.target.value) day = event.target.value;
+    renderContent();
+    remember();
+  }
+  if (event.target.dataset.taskCheck) {
+    const t = state.tasks.find((t) => t.id === event.target.dataset.taskCheck);
+    t.checklist[Number(event.target.dataset.index)].done = event.target.checked;
+    if (!saveState()) state = readState();
+    paintPanel();
+  }
   if (event.target.id === "project-filter") {
     projectFilter = event.target.value;
     renderContent();
@@ -1387,7 +1329,7 @@ document.addEventListener("click", (event) => {
     notify("Исходные примеры восстановлены.");
   }
 });
-detail.addEventListener("submit", async (event) => {
+document.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
   const data = Object.fromEntries(new FormData(form));
@@ -1619,7 +1561,75 @@ function attachment(file) {
         '">Скачать файл</a></div>'
     : "";
 }
+function taskDetail(t) {
+  return (
+    panelHeader("Задача") +
+    `<div class="detail-body task-detail"><h3 class="task-title">${esc(t.name)}</h3>
+    <button class="detail-link" data-project="${esc(t.project)}">${icon("home")}${esc(project(t.project)?.name)}${icon("arrow")}</button>
+    <button class="status-control ${t.status}" data-status-task="${esc(t.id)}">${status(t)}${icon("arrow")}</button>
+    <dl class="detail-facts"><div><dt>${icon("people")}Ответственный</dt><dd>${esc(person(t.assignee)?.name || "Не назначен")}</dd></div><div><dt>${icon("calendar")}Срок</dt><dd>${fullDate(t.due)}</dd></div>${t.stage ? `<div><dt>Этап</dt><dd>${esc(t.stage)}</dd></div>` : ""}</dl>
+    ${t.type === "Количество" ? `<div class="quantity-detail"><span>Объём работ <b>${t.amount || 0} / ${t.target} ${esc(t.unit)}</b></span><progress aria-label="Объём работ" value="${t.amount || 0}" max="${t.target}"></progress></div>` : ""}
+    ${t.note ? `<p class="task-note">${esc(t.note)}</p>` : ""}
+    ${(t.checklist || []).length ? `<section class="detail-section"><h3>Чек-лист (${t.checklist.filter((c) => c.done).length} / ${t.checklist.length})</h3><div class="checklist-items">${t.checklist.map((c, i) => `<label><input type="checkbox" data-task-check="${esc(t.id)}" data-index="${i}" ${c.done ? "checked" : ""}>${esc(c.text)}</label>`).join("")}</div></section>` : ""}
+    <section class="detail-section"><h3>Фотоотчёт</h3><div class="task-gallery">${taskPhoto(t) || '<p class="muted">Фото ещё не добавлено.</p>'}<button class="secondary" data-edit-task="${esc(t.id)}">${icon("plus")} Добавить фото</button></div></section>
+    <section class="detail-section"><h3>Комментарии</h3><div class="task-comments">${(t.comments || []).map((c) => `<p>${esc(c.text)}<small>${esc(c.at)}</small></p>`).join("")}</div><form id="comment-form" data-id="${esc(t.id)}" class="comment-entry"><label><span class="sr-only">Комментарий</span><input name="comment" required maxlength="1000" placeholder="Добавить комментарий…"></label><button class="icon-button" aria-label="Отправить комментарий">${icon("arrow")}</button></form></section>
+    <div class="detail-actions"><button class="secondary" data-edit-task="${esc(t.id)}">Редактировать</button><button class="primary" data-status-task="${esc(t.id)}">Изменить статус</button></div></div>`
+  );
+}
+function assignmentForm(id = "", inline = false) {
+  const available = state.tasks.filter(
+    (t) =>
+      t.status !== "done" && (!projectFilter || t.project === projectFilter),
+  );
+  return `<form class="assignment-form" id="${inline ? "assign-inline-form" : "assign-form"}"><label>Задача<select name="task" required aria-label="Задача">${available.map((t) => `<option value="${esc(t.id)}">${esc(t.name)} · ${esc(project(t.project)?.name)}</option>`).join("")}</select></label><label>Ответственный<select name="assignee" required aria-label="Ответственный">${options(state.people, id)}</select></label><label>Срок выполнения<input type="date" name="due" value="${day}" required></label><button class="primary" ${!available.length || !state.people.length ? "disabled" : ""}>Назначить задачу</button>${!available.length ? '<p class="form-note">Сначала создайте задачу для объекта.</p>' : ""}</form>`;
+}
 function extendPanel(route, id, body) {
+  if (route === "attention")
+    return (
+      panelHeader("Требует внимания") +
+      '<div class="detail-body">' +
+      attention() +
+      "</div>"
+    );
+  if (route === "person") {
+    const m = person(id);
+    if (!m) return "";
+    const tasks = state.tasks.filter((t) => t.assignee === id),
+      active = tasks.filter((t) => t.status !== "done"),
+      done = tasks.filter((t) => t.status === "done");
+    return (
+      panelHeader(m.name) +
+      `<div class="detail-body"><div class="member-intro">${avatar(id)}<div><strong>${esc(m.name)}</strong><small>${esc(m.role)}</small></div></div>${m.phone ? `<a class="secondary phone-action" href="tel:${esc(m.phone.replace(/[^+0-9]/g, ""))}">Позвонить · ${esc(m.phone)}</a>` : ""}<div class="member-workload"><span>Текущие объекты<strong>${esc([...new Set(active.map((t) => project(t.project)?.name))].join(", ") || "Не назначены")}</strong></span><span>Занятость<strong>${taskCount(active.length)}</strong></span></div><h3 class="member-section">Активные задачи (${active.length})</h3>${active.map((t) => taskRow(t)).join("") || empty("Нет активных задач.")}<details class="completed-tasks"><summary>Выполненные (${done.length})</summary>${done.map((t) => taskRow(t)).join("")}</details><button class="primary assign-wide" data-assign="${esc(id)}">Назначить задачу</button></div>`
+    );
+  }
+  if (route === "task") {
+    const t = state.tasks.find((t) => t.id === id);
+    return t ? taskDetail(t) : "";
+  }
+  if (route === "assign")
+    return (
+      panelHeader("Назначение задачи") +
+      '<div class="detail-body">' +
+      assignmentForm(id) +
+      "</div>"
+    );
+  if (route === "status") {
+    const t = state.tasks.find((t) => t.id === id);
+    if (!t) return "";
+    return (
+      panelHeader("Статус задачи") +
+      `<div class="detail-body"><form id="status-form" data-id="${esc(id)}"><fieldset class="status-options"><legend class="sr-only">Статус</legend>${Object.entries(
+        statuses,
+      )
+        .map(
+          ([key, v]) =>
+            `<label><input type="radio" name="status" value="${key}" ${t.status === key ? "checked" : ""}>${v.label}</label>`,
+        )
+        .join(
+          "",
+        )}</fieldset><button class="primary">Применить</button></form></div>`
+    );
+  }
   if (route === "edit-project") {
     const p = project(id);
     if (!p) return "";
@@ -1693,7 +1703,7 @@ function extendPanel(route, id, body) {
       '<button class="primary">Сохранить оплату</button></form></div>'
     );
   }
-  if (route === "task" || route === "new-task") {
+  if (route === "edit-task" || route === "new-task") {
     const t = state.tasks.find((t) => t.id === id) || {};
     const extras =
       '<label>Этап<input name="stage" maxlength="100" value="' +
@@ -1808,19 +1818,6 @@ function extendPanel(route, id, body) {
       '<p class="form-note">',
       '<label>Телефон<input name="phone" type="tel" maxlength="25"></label><p class="form-note">',
     );
-  if (route === "person") {
-    const m = person(id);
-    return body.replace(
-      '<div class="member-intro">',
-      (m.phone
-        ? '<a class="secondary" href="tel:' +
-          esc(m.phone.replace(/[^+\d]/g, "")) +
-          '">Позвонить · ' +
-          esc(m.phone) +
-          "</a>"
-        : "") + '<div class="member-intro">',
-    );
-  }
   if (route === "project") {
     const item = project(id);
     return (
@@ -1844,9 +1841,9 @@ function extendPanel(route, id, body) {
                 );
               })
               .join("") +
-            '<form id="stage-form" data-id="' +
+            '<details class="stage-add"><summary>Добавить этап</summary><form id="stage-form" data-id="' +
             esc(id) +
-            '"><label>Новый этап<input name="name" required maxlength="100"></label><button class="secondary">Добавить этап</button></form></div><div class="detail-tabs"',
+            '"><label>Новый этап<input name="name" required maxlength="100"></label><button class="secondary">Добавить этап</button></form></details></div><div class="detail-tabs"',
         )
         .replace("</div></div>", "</div></div>") +
       '<div class="detail-body"><button class="secondary" data-edit-project="' +
@@ -1864,6 +1861,30 @@ function extendPanel(route, id, body) {
   return body;
 }
 function extraClick(b) {
+  if (b.dataset.date) {
+    day = b.dataset.date;
+    renderContent();
+    remember();
+    return true;
+  }
+  if (b.dataset.editTask) {
+    openPanel("edit-task", b.dataset.editTask, b);
+    return true;
+  }
+  if (b.dataset.statusTask) {
+    openPanel("status", b.dataset.statusTask, b);
+    return true;
+  }
+  if (b.dataset.assign) {
+    const inline = document.querySelector("#assign-inline-form");
+    if (inline && innerWidth >= 1000 && !detail.open) {
+      inline.elements.assignee.value = b.dataset.assign;
+      inline.elements.task.focus();
+      return true;
+    }
+    openPanel("assign", b.dataset.assign, b);
+    return true;
+  }
   if (b.dataset.offer) {
     parent.postMessage(
       { type: "belkhi-crm-offer", id: b.dataset.offer },
@@ -1950,6 +1971,56 @@ async function shareDocument(id) {
 }
 async function extraSubmit(form, data) {
   try {
+    if (form.id === "status-form") {
+      const t = state.tasks.find((t) => t.id === form.dataset.id);
+      if (
+        t.type === "Фото" &&
+        ["review", "done"].includes(data.status) &&
+        !t.photo &&
+        !t.upload
+      )
+        throw Error("Добавьте фотоотчёт перед сдачей задачи.");
+      t.status = data.status;
+      if (t.type === "Количество" && data.status === "done")
+        t.amount = t.target;
+      addLog(
+        "Статус задачи · " + t.name + " · " + statuses[t.status].label,
+        t.project,
+      );
+      commitChange("Статус обновлён.");
+      return true;
+    }
+    if (form.id === "comment-form") {
+      const t = state.tasks.find((t) => t.id === form.dataset.id);
+      if (!String(data.comment).trim()) return true;
+      t.comments ||= [];
+      t.comments.push({
+        text: data.comment.trim(),
+        at: new Date().toLocaleString("ru-RU"),
+      });
+      if (!saveState()) state = readState();
+      paintPanel();
+      return true;
+    }
+    if (form.id === "assign-form" || form.id === "assign-inline-form") {
+      const t = state.tasks.find((t) => t.id === data.task);
+      if (!t || !person(data.assignee))
+        throw Error("Выберите задачу и работника.");
+      t.assignee = data.assignee;
+      t.due = data.due;
+      addLog("Назначена задача · " + t.name, t.project);
+      if (detail.open) commitChange("Задача назначена.");
+      else {
+        if (!saveState()) {
+          state = readState();
+          render();
+          return true;
+        }
+        render();
+        notify("Задача назначена.");
+      }
+      return true;
+    }
     if (form.id === "edit-project-form") {
       if (
         ![{ name: serviceRegion }, ...servicePlaces].some(
@@ -2018,8 +2089,8 @@ async function extraSubmit(form, data) {
       return true;
     }
     if (form.id === "task-form") {
-      const id = location.hash.startsWith("#task=")
-        ? decodeURIComponent(location.hash.slice(6))
+      const id = location.hash.startsWith("#edit-task=")
+        ? decodeURIComponent(location.hash.slice(11))
         : "";
       let t = state.tasks.find((t) => t.id === id);
       const upload = await readFile(form.elements.upload.files[0]);
@@ -2030,6 +2101,7 @@ async function extraSubmit(form, data) {
         due: data.due,
         status: data.status,
         note: data.note,
+        priority: data.priority || "Обычный",
         stage: data.stage,
         time: data.time,
         type: data.type,
@@ -2090,19 +2162,21 @@ async function extraSubmit(form, data) {
         paid: 0,
         payments: [],
         status: "waiting",
-        date: snapshotDate,
+        date: data.date || snapshotDate,
         file,
       });
       commitChange("Документ добавлен.");
       return true;
     }
     if (form.id === "person-form") {
+      const photo = await readFile(form.elements.photo.files[0]);
       const name = String(data.name).trim();
       state.people.push({
         id: crypto.randomUUID(),
         name,
         role: data.role,
         phone: data.phone,
+        photo,
         initials: name
           .split(/\s+/)
           .slice(0, 2)

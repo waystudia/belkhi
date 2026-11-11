@@ -1,0 +1,1843 @@
+/* Shared CRM composition, matched to the approved desktop and phone references. */
+:root {
+  --green: #00843d;
+  --mint: #e5f4e8;
+  --ink: #14291f;
+  --muted: #5b6860;
+  --line: #e1e7e3;
+  --radius: 8px;
+  --field: #f5f7f5;
+  color: var(--ink);
+  background: #fff;
+}
+body {
+  background: #fff;
+  font-size: 14px;
+}
+input,
+textarea {
+  caret-color: var(--green);
+}
+button {
+  font-weight: 500;
+}
+strong {
+  font-weight: 650;
+}
+progress {
+  height: 7px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+button:disabled {
+  opacity: 0.55;
+  background: var(--field);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.crm-shell {
+  grid-template-columns: 164px minmax(0, 1fr);
+}
+.crm-heading {
+  padding: 10px 22px;
+}
+.crm-heading h1 {
+  font-size: 22px;
+  font-weight: 650;
+}
+.crm-heading .project-filter {
+  margin-left: auto;
+  max-width: 230px;
+}
+.crm-heading select {
+  width: 100%;
+  height: 36px;
+  font-size: 13px;
+}
+.crm-content {
+  padding: 22px;
+  min-width: 0;
+}
+.crm-content .page-title h2 {
+  font-size: 24px;
+  letter-spacing: -0.025em;
+  font-weight: 650;
+}
+.crm-content .page-title {
+  margin-bottom: 20px;
+}
+.crm-nav {
+  background: #fafcfb;
+  padding: 16px 8px;
+}
+.crm-nav button {
+  font-size: 13px;
+  font-weight: 500;
+}
+.crm-content .search-row {
+  margin-bottom: 18px;
+}
+.search {
+  width: 320px;
+  max-width: 100%;
+}
+.search input {
+  font-size: 13px;
+}
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+.section-title {
+  margin-bottom: 14px;
+}
+.section-title h2 {
+  font-size: 17px;
+}
+.toolbar:empty {
+  display: none;
+}
+.toolbar {
+  margin-bottom: 16px;
+}
+.crm-storage-note {
+  margin-top: 24px;
+  font-size: 11px;
+  border: 0;
+  padding: 0;
+}
+.crm-storage-note summary {
+  cursor: pointer;
+  width: max-content;
+}
+.crm-storage-note p {
+  padding-top: 8px;
+}
+.primary {
+  background: var(--green);
+  border-color: var(--green);
+  font-weight: 600;
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 7px;
+}
+.secondary {
+  border-radius: 7px;
+  min-height: 38px;
+}
+.status {
+  border-radius: 5px;
+  font-weight: 400;
+  font-size: 12px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+.status.doing,
+.status.done {
+  background: #dbf2de;
+  color: #14502b;
+}
+.status.review {
+  background: #ffebc2;
+  color: #734407;
+}
+.status.planned {
+  background: #eef0f1;
+  color: #39473f;
+}
+/* Objects: aligned rows on desktop, same information in compact mobile cards. */
+.objects-layout {
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 20px;
+}
+.object-list {
+  gap: 0;
+  min-width: 0;
+}
+.object-card,
+.object-table-head {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.7fr) minmax(75px, 0.8fr) minmax(95px, 1fr)
+    minmax(75px, 0.8fr) 76px;
+  gap: 12px;
+  align-items: center;
+}
+.object-table-head {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.object-card {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 16px 0;
+  overflow: visible;
+}
+.object-heading {
+  padding: 0;
+  gap: 10px;
+  border-radius: 6px;
+  align-items: center;
+  align-self: center;
+}
+.object-heading > img {
+  width: 58px;
+  height: 62px;
+  border-radius: 6px;
+}
+.object-heading strong {
+  font-size: 14px;
+  line-height: 1.3;
+}
+.object-heading small {
+  font-size: 11px;
+}
+.object-phase {
+  font-size: 12px;
+}
+.object-manager {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  font-size: 12px;
+  min-width: 0;
+}
+.object-manager .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+  flex: none;
+}
+.object-progress {
+  min-width: 0;
+}
+.object-progress .progress-copy {
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+.object-progress .progress-copy > span {
+  display: none;
+}
+.object-progress progress {
+  width: 100%;
+}
+.object-due {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.object-due .icon {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+}
+.attention-row {
+  padding: 13px 0;
+}
+.attention-row strong {
+  font-size: 13px;
+}
+.attention-row small {
+  font-size: 11px;
+}
+.objects-layout > .attention {
+  grid-column: auto;
+}
+.attention .muted {
+  font-size: 12px;
+  line-height: 1.5;
+}
+/* Today and journal. */
+.day-layout {
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 24px;
+}
+.day-plan {
+  min-width: 0;
+}
+.date-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.date-line label {
+  margin: 0;
+}
+.date-line input {
+  border: 0;
+  padding: 0;
+  width: 142px;
+  min-height: 36px;
+  font-size: 14px;
+  background: transparent;
+  font-weight: 600;
+}
+.date-line > .muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+.week-strip {
+  display: flex;
+  gap: 0;
+  margin-bottom: 22px;
+  align-items: stretch;
+}
+.week-strip button {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 2px;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 0;
+  min-height: 48px;
+}
+.week-strip button small {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.week-strip .icon-button {
+  flex: 0 0 28px;
+  border: 0;
+  min-height: 48px;
+}
+.week-strip button[aria-pressed="true"] {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+  border-radius: 6px;
+}
+.schedule-row {
+  display: grid;
+  grid-template-columns: 20px 48px minmax(0, 1fr) 112px;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 18px 0;
+  align-items: start;
+}
+.schedule-time {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 22px;
+}
+.schedule-item {
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.schedule-item strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.schedule-item small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+.schedule-item .icon {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+.schedule-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+.schedule-result small {
+  font-size: 11px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.schedule-result img {
+  width: 88px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.task-state {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+.journal > div:not(.section-title) {
+  display: block;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+  min-height: 80px;
+}
+.journal > div:last-child {
+  border: 0;
+}
+.journal-dot {
+  display: none;
+}
+.journal p {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.35;
+  display: flow-root;
+}
+.journal p small {
+  display: block;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 7px;
+  font-size: 11px;
+}
+.journal-photo {
+  width: 74px;
+  height: 64px;
+}
+.day-aside > .text-button {
+  margin: 6px 16px;
+}
+.day-switch,
+.task-switch,
+.document-types {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 0;
+  background: #f8f9f8;
+}
+.segmented button {
+  border: 0;
+  border-radius: 5px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 6px 14px;
+}
+.segmented [aria-pressed="true"] {
+  background: var(--mint);
+  color: #006c33;
+}
+.board {
+  gap: 12px;
+}
+.board-column {
+  background: #f3f6f4;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 0;
+}
+.column-title {
+  margin-bottom: 14px;
+}
+.column-title h2 {
+  font-size: 14px;
+}
+.kanban-task {
+  border: 1px solid #d5ded7;
+  border-radius: 9px;
+  padding: 12px;
+  text-align: left;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kanban-task > strong {
+  order: -1;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.kanban-task > small {
+  margin: 0;
+  font-size: 12px;
+}
+.kanban-foot {
+  flex-wrap: wrap;
+  margin-top: 5px;
+  gap: 6px;
+}
+.kanban-foot > span {
+  font-size: 12px;
+}
+.kanban-foot time {
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.kanban-foot .avatar {
+  width: 28px;
+  height: 28px;
+}
+.quantity-track {
+  margin: 2px 0;
+}
+.board-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.board-tabs button[aria-pressed="true"] {
+  background: var(--green);
+  color: white;
+}
+/* Team and contracts use the same row rhythm. */
+.team-layout {
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 22px;
+}
+.team-roster {
+  border: 0;
+  padding: 0;
+}
+.team-roster > .section-title {
+  display: none;
+}
+.roster-header,
+.person-row {
+  grid-template-columns: minmax(110px, 1.1fr) minmax(100px, 1fr) 85px;
+  gap: 12px;
+}
+.person-row {
+  padding: 15px 0;
+  align-items: center;
+}
+.person-identity .avatar {
+  width: 40px;
+  height: 44px;
+  border-radius: 8px;
+  flex: none;
+}
+.person-identity strong {
+  font-size: 14px;
+}
+.person-identity small {
+  font-size: 12px;
+}
+.load-markers i {
+  height: 10px;
+  width: 12px;
+}
+.person-load .text-button {
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  padding: 4px 9px;
+  min-height: 30px;
+  font-size: 12px;
+}
+.team-side form {
+  display: grid;
+  gap: 14px;
+}
+.team-side label {
+  font-size: 12px;
+}
+.team-side select {
+  font-size: 12px;
+  max-width: 100%;
+}
+.team-side h2 {
+  font-size: 17px;
+}
+.documents-layout {
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 22px;
+}
+.document-ledger {
+  padding: 0;
+  overflow: hidden;
+}
+.document-ledger > .section-title {
+  display: none;
+}
+.document-header {
+  background: var(--field);
+  padding: 12px;
+  font-size: 12px;
+}
+.document-row {
+  padding: 16px 12px;
+}
+.document-header,
+.document-row {
+  grid-template-columns: minmax(0, 1fr) 100px 104px;
+  gap: 10px;
+}
+.document-name strong {
+  font-size: 13px;
+}
+.document-name small,
+.document-money small {
+  font-size: 11px;
+}
+.document-money {
+  font-size: 13px;
+}
+.finance-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.finance-strip > div + div {
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+.finance-strip strong {
+  font-size: 20px;
+  font-weight: 650;
+  margin-top: 4px;
+}
+.finance-strip span {
+  font-size: 11px;
+}
+.payment-plan {
+  background: #f5f7f5;
+}
+.document-paper {
+  box-shadow: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+.paper-mark {
+  font-size: 11px;
+}
+.paper-disclaimer {
+  font-size: 11px;
+}
+.payment-item {
+  padding: 12px 0;
+}
+/* Read views and forms share compact controls and a predictable Back action. */
+.detail-heading {
+  justify-content: flex-start;
+  padding: 7px 12px;
+  gap: 8px;
+}
+.detail-heading h2 {
+  font-size: 17px;
+}
+.detail-heading .icon-button {
+  flex: none;
+}
+.detail-body {
+  padding: 20px;
+}
+.detail-body form {
+  gap: 16px;
+}
+.detail-body label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+.detail-body input:not([type="checkbox"]):not([type="radio"]),
+.detail-body select,
+.detail-body textarea {
+  border: 1px solid #ced9d1;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 14px;
+  min-height: 40px;
+  padding: 9px 11px;
+}
+.detail-body textarea {
+  min-height: 72px;
+}
+.detail-body .form-actions {
+  padding-top: 10px;
+}
+.task-title {
+  font-size: 22px;
+  font-weight: 650;
+  margin: 0 0 10px;
+}
+.detail-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 8px 0;
+  width: 100%;
+  text-align: left;
+}
+.detail-link .icon:last-child {
+  margin-left: auto;
+}
+.status-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--mint);
+  border: 0;
+  margin: 12px 0;
+}
+.status-control .status {
+  background: transparent;
+  padding: 0;
+  font-weight: 600;
+}
+.detail-facts {
+  margin: 0;
+}
+.detail-facts > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.detail-facts dt {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.detail-facts dd {
+  font-size: 13px;
+  margin: 0;
+  text-align: right;
+}
+.quantity-detail {
+  padding: 16px 0;
+}
+.quantity-detail > span {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.quantity-detail progress {
+  width: 100%;
+}
+.task-note {
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.detail-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.detail-section h3 {
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.task-gallery {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.task-gallery img {
+  width: 128px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.task-gallery .muted {
+  font-size: 12px;
+}
+.comment-entry {
+  display: flex;
+  gap: 8px;
+}
+.comment-entry label {
+  flex: 1;
+}
+.comment-entry input {
+  width: 100%;
+}
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.detail-actions button {
+  font-size: 13px;
+  padding: 8px;
+}
+.status-options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.status-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 44px;
+}
+.status-options label:has(:checked) {
+  background: var(--mint);
+  border-color: #a0cfae;
+}
+.status-options input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+.project-steps p {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 10px 0;
+}
+.stage-add {
+  margin-top: 8px;
+}
+.stage-add summary {
+  color: var(--green);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.stage-add form {
+  margin-top: 8px;
+}
+.project-detail-intro img {
+  width: 94px;
+  height: 84px;
+  border-radius: 7px;
+}
+.member-intro .avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+  border-radius: 12px;
+}
+.assignment-form {
+  display: grid;
+  gap: 14px;
+}
+@media (min-width: 1000px) {
+  .crm-shell {
+    grid-template-rows: 58px minmax(0, 1fr);
+  }
+  .crm-heading {
+    height: 58px;
+  }
+  .crm-heading .icon-button {
+    display: inline-flex;
+  }
+  .board-tabs {
+    display: none;
+  }
+  .objects-layout > .attention {
+    display: block;
+  }
+  .crm-heading .project-filter {
+    width: 210px;
+  }
+  .crm-nav {
+    position: sticky;
+    top: 0;
+    height: calc(100dvh - 58px);
+  }
+  .day-aside .attention {
+    display: none;
+  }
+  dialog#detail[data-presentation="page"] {
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    border: 0;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+  }
+  dialog#detail[data-presentation="sheet"] {
+    width: 440px;
+    max-height: 90dvh;
+    border: 0;
+    border-radius: 14px;
+  }
+}
+@media (min-width: 1000px) and (max-width: 1200px) {
+  .objects-layout,
+  .team-layout,
+  .documents-layout,
+  .day-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .objects-layout > .attention {
+    margin-top: 16px;
+  }
+  .team-side,
+  .payment-plan {
+    max-width: 100%;
+  }
+  .object-card,
+  .object-table-head {
+    grid-template-columns: minmax(160px, 1.5fr) 90px 110px 85px 76px;
+  }
+}
+@media (max-width: 999px) {
+  .crm-shell {
+    display: block;
+  }
+  .crm-heading {
+    padding: 8px 14px;
+    gap: 8px;
+    min-height: 54px;
+    height: auto;
+  }
+  .crm-heading h1 {
+    font-size: 21px;
+  }
+  .crm-heading .project-filter {
+    width: 155px;
+    max-width: 52%;
+    min-width: 0;
+  }
+  .crm-heading select {
+    font-size: 12px;
+    height: 34px;
+    min-height: 34px;
+    padding: 6px 25px 6px 9px;
+  }
+  .crm-heading .icon-button {
+    width: 28px;
+    min-width: 28px;
+    height: 40px;
+    margin: 0 -5px 0 0;
+  }
+  .crm-nav {
+    background: white;
+    padding: 0 14px;
+    gap: 22px;
+    height: auto;
+  }
+  .crm-nav button {
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 42px;
+  }
+  .crm-nav [aria-current="page"] {
+    font-weight: 650;
+  }
+  .crm-content {
+    padding: 16px 14px 20px;
+  }
+  .crm-content .page-title {
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+  .crm-content .page-title h2 {
+    font-size: 20px;
+  }
+  .crm-content .page-title .primary {
+    font-size: 12px;
+    min-height: 34px;
+    padding: 6px 11px;
+  }
+  .crm-content .search-row {
+    margin-bottom: 14px;
+  }
+  .crm-content .search {
+    width: 100%;
+    height: 38px;
+  }
+  .search input {
+    font-size: 14px;
+    min-width: 0;
+  }
+  .objects-layout,
+  .team-layout,
+  .documents-layout,
+  .day-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .object-table-head {
+    display: none;
+  }
+  .object-list {
+    gap: 10px;
+  }
+  .object-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(90px, 0.7fr);
+    gap: 8px 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .object-heading {
+    grid-column: 1/-1;
+    gap: 12px;
+    align-items: start;
+  }
+  .object-heading > img {
+    width: 78px;
+    height: 74px;
+  }
+  .object-heading strong {
+    font-size: 15px;
+  }
+  .object-heading small {
+    font-size: 12px;
+  }
+  .object-phase {
+    grid-column: 1/-1;
+    margin: -41px 0 14px 90px;
+    font-size: 12px;
+    min-height: 18px;
+    pointer-events: none;
+  }
+  .object-manager {
+    grid-column: 1;
+    font-size: 11px;
+  }
+  .object-progress {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .object-due {
+    grid-column: 1/-1;
+    font-size: 11px;
+  }
+  .object-progress .progress-copy {
+    margin: 0 0 4px;
+  }
+  .objects-layout > .attention {
+    display: block;
+    grid-column: auto;
+    border: 1px solid var(--line);
+    background: #f7fbf8;
+    order: -1;
+    padding: 12px;
+  }
+  .attention .section-title {
+    margin-bottom: 0;
+  }
+  .attention .section-title h2 {
+    font-size: 14px;
+  }
+  .attention .muted {
+    padding-top: 8px;
+  }
+  .attention-row {
+    padding: 10px 0;
+  }
+  .attention-row strong {
+    font-size: 12px;
+  }
+  .day-switch {
+    display: flex;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .day-switch button {
+    flex: 1;
+    min-height: 34px;
+    font-size: 13px;
+  }
+  .day-aside {
+    display: none;
+  }
+  .day-plan {
+    padding: 0;
+  }
+  .date-line {
+    margin-bottom: 10px;
+  }
+  .date-line > .muted {
+    font-size: 11px;
+  }
+  .week-strip {
+    margin-bottom: 12px;
+  }
+  .week-strip button {
+    min-height: 44px;
+  }
+  .week-strip .icon-button {
+    width: 22px;
+    flex-basis: 22px;
+  }
+  .schedule-row {
+    grid-template-columns: 18px minmax(0, 1fr) 90px;
+    gap: 4px 9px;
+    padding: 15px 0;
+    align-items: start;
+  }
+  .schedule-row > .task-state {
+    grid-column: 1;
+    grid-row: 1/3;
+  }
+  .schedule-time {
+    grid-column: 2;
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .schedule-item {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .schedule-item strong {
+    font-size: 14px;
+  }
+  .schedule-item small {
+    font-size: 11px;
+    gap: 4px;
+    margin-top: 5px;
+    line-height: 1.3;
+  }
+  .schedule-result {
+    grid-column: 3;
+    grid-row: 1/3;
+  }
+  .schedule-result .status {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+  .schedule-result img {
+    width: 80px;
+    height: 60px;
+  }
+  .schedule-result small {
+    font-size: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .journal {
+    padding: 0;
+    border: 0;
+  }
+  .journal > div:not(.section-title) {
+    padding: 14px 0;
+    min-height: 90px;
+  }
+  .journal p {
+    font-size: 14px;
+  }
+  .journal-photo {
+    width: 100px;
+    height: 75px;
+  }
+  .journal .section-title h2 {
+    font-size: 20px;
+  }
+  .board-tabs {
+    display: flex;
+    gap: 5px;
+    overflow: visible;
+  }
+  .board-tabs button {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 3px;
+    font-size: 11px;
+    min-height: 38px;
+  }
+  .board-tabs button span {
+    font-size: 10px;
+  }
+  .board-column {
+    background: transparent;
+    padding: 0;
+    min-height: 0;
+  }
+  .column-title {
+    margin: 16px 0 12px;
+  }
+  .column-title h2 {
+    font-size: 17px;
+  }
+  .kanban-task {
+    padding: 13px;
+    gap: 7px;
+  }
+  .kanban-task > strong {
+    font-size: 16px;
+  }
+  .kanban-foot time {
+    width: auto;
+    margin: 0 0 0 auto;
+  }
+  .task-switch {
+    margin-bottom: 12px;
+  }
+  .team-roster {
+    padding: 0;
+  }
+  .roster-header {
+    display: none;
+  }
+  .person-row {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    gap: 8px 12px;
+    padding: 14px 0;
+  }
+  .person-identity {
+    grid-column: 1;
+    align-items: center;
+    gap: 10px;
+  }
+  .person-identity strong {
+    font-size: 14px;
+  }
+  .person-identity small {
+    font-size: 12px;
+  }
+  .person-tasks {
+    grid-column: 1;
+    margin-left: 50px;
+  }
+  .person-tasks > button {
+    font-size: 11px;
+    min-height: 24px;
+  }
+  .person-tasks > button:not(:first-child) {
+    display: none;
+  }
+  .person-load {
+    grid-column: 2;
+    grid-row: 1/3;
+  }
+  .person-load strong {
+    font-size: 12px;
+  }
+  .person-load .text-button {
+    min-height: 32px;
+    font-size: 11px;
+  }
+  .team-side {
+    display: none;
+  }
+  .load-markers {
+    margin: 6px 0;
+  }
+  .finance-strip {
+    padding: 12px 10px;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .finance-strip > div + div {
+    padding-left: 8px;
+  }
+  .finance-strip > div:first-child {
+    width: auto;
+  }
+  .finance-strip span {
+    font-size: 10px;
+  }
+  .finance-strip strong,
+  .finance-strip > div:first-child strong {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .document-types {
+    display: flex;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+  .document-types button {
+    flex: 1;
+    font-size: 12px;
+    padding: 5px 10px;
+    min-height: 34px;
+  }
+  .document-header {
+    display: none;
+  }
+  .document-ledger {
+    border: 0;
+    overflow: visible;
+  }
+  .document-row {
+    grid-template-columns: minmax(0, 1fr) 108px;
+    gap: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 12px 10px;
+    margin-bottom: 8px;
+  }
+  .document-name {
+    grid-column: 1;
+    grid-row: 1/3;
+    gap: 8px;
+  }
+  .document-name strong {
+    font-size: 13px;
+  }
+  .document-name .icon {
+    width: 18px;
+  }
+  .document-money {
+    grid-column: 2;
+    font-size: 12px;
+  }
+  .document-money small {
+    font-size: 10px;
+  }
+  .document-status {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+  .document-status .status {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .document-status > .icon {
+    display: none;
+  }
+  .payment-plan {
+    display: none;
+  }
+  .detail-heading {
+    min-height: 52px;
+    padding: 5px 10px;
+  }
+  .detail-heading h2 {
+    font-size: 17px;
+  }
+  .detail-heading .icon-button {
+    width: 32px;
+  }
+  .detail-body {
+    padding: 16px 14px;
+  }
+  .detail-body input:not([type="checkbox"]):not([type="radio"]),
+  .detail-body select,
+  .detail-body textarea {
+    font-size: 16px;
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+  .detail-body label {
+    font-size: 12px;
+  }
+  .detail-body form {
+    gap: 14px;
+  }
+  .task-title {
+    font-size: 20px;
+  }
+  .task-gallery img {
+    width: 120px;
+    height: 98px;
+  }
+  .detail-actions {
+    position: sticky;
+    bottom: -16px;
+    background: #fff;
+    padding: 12px 0;
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+  .detail-actions button {
+    font-size: 12px;
+    min-height: 40px;
+  }
+  .detail-facts > div {
+    padding: 12px 0;
+  }
+  .detail-facts dt,
+  .detail-facts dd {
+    font-size: 12px;
+  }
+  .detail-section {
+    padding: 14px 0;
+  }
+  .status-options label {
+    font-size: 14px;
+  }
+  dialog#detail[data-presentation="sheet"] {
+    height: auto;
+    max-height: 85dvh;
+    min-height: 0;
+    top: auto;
+    bottom: 0;
+    margin: auto 0 0;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    overflow: auto;
+    padding-top: 10px;
+  }
+  dialog#detail[data-presentation="sheet"]::before {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 4px;
+    border-radius: 4px;
+    background: #cbd3ce;
+    margin: 0 auto 4px;
+  }
+  dialog[data-presentation="sheet"] .detail-heading {
+    border: 0;
+  }
+  dialog[data-presentation="sheet"] .detail-body {
+    padding-bottom: 24px;
+  }
+  .section-menu button {
+    font-size: 14px;
+    min-height: 46px;
+  }
+  .crm-storage-note {
+    margin-top: 20px;
+  }
+  .project-steps {
+    padding: 14px 0;
+  }
+  .project-steps p {
+    font-size: 12px;
+  }
+  .project-detail-intro strong {
+    font-size: 15px;
+  }
+}
+@media (max-width: 360px) {
+  .crm-content .page-title h2 {
+    font-size: 18px;
+  }
+  .crm-nav {
+    gap: 18px;
+  }
+  .crm-nav button {
+    font-size: 12px;
+  }
+  .crm-heading h1 {
+    font-size: 20px;
+  }
+  .schedule-row {
+    grid-template-columns: 16px minmax(0, 1fr) 78px;
+    gap: 4px 7px;
+  }
+  .schedule-result img {
+    width: 74px;
+    height: 55px;
+  }
+  .schedule-item strong {
+    font-size: 13px;
+  }
+  .finance-strip strong,
+  .finance-strip > div:first-child strong {
+    font-size: 12px;
+  }
+  .object-card {
+    padding: 10px;
+  }
+  .object-manager {
+    font-size: 10px;
+  }
+  .detail-actions button {
+    font-size: 11px;
+  }
+  .board-tabs button {
+    font-size: 10px;
+  }
+  .document-row {
+    grid-template-columns: minmax(0, 1fr) 94px;
+  }
+  .document-money {
+    font-size: 11px;
+  }
+}
+/* Native form controls and narrow amounts must not dictate grid width. */
+.assignment-form,
+.assignment-form label {
+  min-width: 0;
+}
+.assignment-form label {
+  display: grid;
+  gap: 6px;
+}
+.assignment-form select,
+.assignment-form input {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 40px;
+  border: 1px solid #ced9d1;
+  border-radius: 7px;
+  background: white;
+  padding: 8px;
+  font-size: 13px;
+}
+.detail-body .status-options label,
+.detail-body .checklist-items label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.detail-body .status-options input,
+.detail-body .checklist-items input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  flex: 0 0 18px;
+}
+.detail-body .comment-entry {
+  display: flex;
+}
+.schedule-time {
+  padding: 0;
+  color: var(--ink);
+}
+.journal > div:not(.section-title) {
+  margin: 0;
+}
+.document-money,
+.document-money small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.finance-strip > div:first-child {
+  grid-column: auto;
+}
+.finance-strip .finance-progress {
+  grid-column: 1/-1;
+  border: 0;
+  padding: 10px 0 0;
+}
+.finance-progress > span {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.finance-progress progress {
+  width: 100%;
+}
+.team-side {
+  min-width: 0;
+}
+.team-side form > button {
+  width: 100%;
+  min-width: 0;
+}
+.paper-preview {
+  padding: 16px;
+  background: #f2f5f3;
+  border: 0;
+}
+.paper-preview .document-paper {
+  min-height: 300px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.paper-preview h3 {
+  font-size: 18px;
+  line-height: 1.3;
+}
+.paper-preview dl {
+  margin: 0;
+  font-size: 12px;
+}
+.paper-preview dl > div {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.paper-preview dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.paper-preview .secondary {
+  margin-top: auto;
+  font-size: 12px;
+}
+.paper-preview .muted {
+  font-size: 12px;
+}
+.day-mobile-action {
+  display: none;
+}
+body[data-section="day"] .search-row {
+  display: none;
+}
+@media (max-width: 999px) {
+  body[data-section="day"] .page-title {
+    display: none;
+  }
+  .day-mobile-action {
+    display: inline-flex;
+    margin-left: auto;
+    font-size: 12px;
+    min-height: 34px;
+  }
+  .date-line > .muted {
+    display: none;
+  }
+  .finance-strip > div:first-child {
+    grid-column: auto;
+  }
+  .finance-strip span {
+    font-size: 10px;
+  }
+  .finance-strip strong {
+    white-space: nowrap;
+  }
+  .paper-preview {
+    display: none;
+  }
+  .document-name > span {
+    min-width: 0;
+  }
+  .document-name strong {
+    overflow-wrap: anywhere;
+  }
+  .document-types {
+    max-width: 100%;
+  }
+  .document-types button {
+    min-width: 0;
+  }
+  .status-options label {
+    padding: 10px 12px;
+  }
+  .detail-body .status-options input {
+    min-height: 0;
+  }
+  .schedule-result small {
+    color: var(--muted);
+  }
+}
+.journal p .journal-time {
+  margin: 0 0 5px;
+  color: var(--ink);
+  font-size: 11px;
+}
+.schedule-item small,
+.object-heading small {
+  font-weight: 400;
+}
+.priority-field {
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+.priority-field legend {
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+.priority-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.detail-body .priority-choices label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  padding: 8px 3px;
+  min-height: 38px;
+  font-size: 12px;
+  gap: 5px;
+}
+.priority-choices label:first-child {
+  border-radius: 7px 0 0 7px;
+}
+.priority-choices label:last-child {
+  border-radius: 0 7px 7px 0;
+}
+.priority-choices label:has(:checked) {
+  background: var(--mint);
+  border-color: #9bc9aa;
+}
+.detail-body .priority-choices input {
+  width: 12px;
+  height: 12px;
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+.project-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.project-gallery button {
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+}
+.project-gallery img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.project-gallery span {
+  display: block;
+  padding: 6px 0;
+  font-size: 12px;
+}
+.member-workload {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  background: var(--mint);
+  padding: 14px;
+  border-radius: 8px;
+  margin: 18px 0;
+  font-size: 12px;
+}
+.member-workload strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+}
+.member-section {
+  margin-bottom: 10px;
+}
+.completed-tasks {
+  margin: 18px 0;
+}
+.completed-tasks summary {
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.assign-wide {
+  width: 100%;
+  margin-top: 12px;
+}
+.phone-action {
+  margin-top: 10px;
+}
+.person-identity .avatar {
+  object-fit: cover;
+}
+.document-money small {
+  font-size: 10px;
+}
+.paper-preview .document-paper dl > div {
+  display: block;
+}
+.paper-preview dd {
+  text-align: left;
+}
+.paper-preview .document-paper h3 {
+  margin: 0;
+}
+.paper-preview .document-paper {
+  min-height: 320px;
+}
+.paper-preview .paper-mark {
+  margin: 0;
+}
+.project-gallery .empty {
+  grid-column: 1/-1;
+}
+@media (min-width: 1000px) {
+  .document-header,
+  .document-row {
+    grid-template-columns: minmax(0, 1fr) 140px 116px;
+  }
+  .document-money small {
+    white-space: nowrap;
+  }
+  .person-row {
+    min-height: 82px;
+  }
+  .person-tasks {
+    gap: 3px;
+  }
+  .person-tasks > button {
+    min-height: 26px;
+  }
+}
+.mobile-phase {
+  display: none;
+}
+@media (max-width: 999px) {
+  .object-phase {
+    display: none;
+  }
+  .object-heading .mobile-phase {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    margin-top: 6px;
+  }
+  .object-progress {
+    grid-row: 2;
+  }
+  .detail-tabs button {
+    font-size: 11px;
+    padding-inline: 6px;
+  }
+  .detail-tabs {
+    gap: 0;
+  }
+  .task-gallery button {
+    min-height: 40px;
+  }
+  .document-types {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+}
+.attention-trigger {
+  display: none;
+}
+@media (max-width: 999px) {
+  .objects-layout > .attention {
+    display: none;
+  }
+  .attention-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    order: -1;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--mint);
+    text-align: left;
+    min-height: 42px;
+    font-size: 12px;
+  }
+  .attention-trigger > span {
+    margin-left: auto;
+  }
+  .detail-body > .attention {
+    padding: 0;
+    background: #fff;
+    border: 0;
+  }
+  .detail-body > .attention > .section-title {
+    display: none;
+  }
+}

@@ -680,3 +680,11 @@ body[data-surface="app"] main.unified-crm-host{padding:0;overflow:hidden}
  #crm-workspace{height:calc(100dvh - 58px);min-height:600px}
 }
 @media(max-width:799px){#crm-workspace{height:calc(100dvh - var(--workspace-header) - var(--workspace-bottom) - env(safe-area-inset-bottom));min-height:0}}
+
+/* A quiet global icon rail leaves room for the CRM navigation and working area. */
+@media(min-width:800px){
+ body[data-surface="app"]:has(.unified-crm-host){--workspace-rail:64px;--workspace-width:min(1376px,calc(100vw - 64px))}
+ body[data-surface="app"]:has(.unified-crm-host) #bottom-nav{padding:0 8px}
+ body[data-surface="app"]:has(.unified-crm-host) #bottom-nav a{justify-content:center;padding:10px}
+ body[data-surface="app"]:has(.unified-crm-host) #bottom-nav a span{display:none}
+}

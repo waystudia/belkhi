@@ -30,7 +30,7 @@ const assert = require("node:assert/strict");
         });
       }
       await f.locator(".crm-nav [data-view=day]").click();
-      await f.locator("[data-day-tab=journal]").click();
+      await f.locator(".day-switch [data-day-tab=journal]").click();
       await f.locator("[data-action=new-journal]").click();
       await f
         .locator("#journal-form [name=name]")

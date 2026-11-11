@@ -16,3 +16,28 @@ CRM работает локально. Хранилище `belkhi-unified-crm-v1
 `tests/unified-crm-flows.cjs`: работник, назначение, количественная задача, комментарии/чек-лист, возврат из карточки, договор, оплата, перезагрузка.
 
 Требуется Playwright; при внешней установке задайте `PLAYWRIGHT_MODULE` и при необходимости `CHROMIUM_PATH`. Аргумент теста — адрес приложения (по умолчанию localhost:4182).
+
+## Reference design refinement · 12 November 2026
+
+The approved desktop and mobile boards are the visual source: white surfaces,
+green primary actions, mint selection, Golos Text, compact forms and thin rules.
+`workspace-crm/reference.css` contains the responsive composition. Shared palette
+values live in `design-tokens.css` and also apply to the surrounding application.
+
+- One project selector stays visible across all five sections.
+- Objects use aligned desktop rows and mobile cards. Today includes a week/date
+  selector, plan/journal switch and desktop journal sidebar.
+- Task read view is separate from editing; status changes use a bottom sheet on
+  mobile. Checklists and comments save from the read view. Edit and nested Back
+  preserve the underlying task or project context.
+- Team assignment uses the desktop inspector or mobile form. Worker photos can
+  be uploaded; initials remain the fallback when no photo was provided.
+- Documents show totals, payment progress and a desktop accounting-card preview.
+  Actual files and payments continue using the existing local persistence.
+- Project photos aggregate the task photo reports; photos link back to tasks.
+
+Validation: `tests/unified-crm-reference.cjs` uses an isolated seeded browser scope
+for populated layouts at 319, 390, 768, 1024 and 1440px. It also exercises status,
+checklist, comment, assignment, calendar and nested photo-tab return. Existing
+responsive and create/edit/payment tests cover the actual embedded application.
+These changes do not add cloud synchronization or electronic signatures.

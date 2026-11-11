@@ -35,16 +35,22 @@ const assert = require("node:assert/strict");
     await f.locator("dialog").waitFor({ state: "hidden" });
     await f.locator("[data-board=doing]").click();
     await f.getByRole("button").filter({ hasText: "Тест арматура" }).click();
+    await f.locator("[data-edit-task]").last().click();
     await f.locator("[name=amount]").fill("18");
     await f.locator("[name=completedItem]").first().check();
     await f.locator("#task-form .primary").click();
+    await f.locator(".task-detail").waitFor();
+    await f.locator("[data-close-panel]").click();
     await f.locator("dialog").waitFor({ state: "hidden" });
     await f.getByRole("button").filter({ hasText: "Тест арматура" }).click();
+    await f.locator("[data-edit-task]").last().click();
     assert.equal(await f.locator("[name=amount]").inputValue(), "18");
     assert.equal(
       await f.locator("[name=completedItem]").first().isChecked(),
       true,
     );
+    await f.locator("[data-close-panel]").click();
+    await f.locator(".task-detail").waitFor();
     await f.locator("[data-close-panel]").click();
     await f.locator("dialog").waitFor({ state: "hidden" });
     assert.equal(
