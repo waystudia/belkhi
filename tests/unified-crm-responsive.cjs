@@ -9,8 +9,8 @@ const assert = require("node:assert/strict");
   const errors = [];
   p.on("pageerror", (e) => errors.push(e.message));
   try {
-    for (const width of [319, 390, 768, 1440]) {
-      await p.setViewportSize({ width, height: 900 });
+    for (const width of [319, 390, 768, 800, 1024, 1440]) {
+      await p.setViewportSize({ width, height: width === 319 ? 509 : 900 });
       await p.goto((process.argv[2] || "http://127.0.0.1:4182/") + "#works");
       const f = p.frameLocator("#crm-workspace");
       await f.locator(".crm-heading").waitFor();

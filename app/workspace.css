@@ -679,3 +679,4 @@ body[data-surface="app"] main.unified-crm-host{padding:0;overflow:hidden}
  body[data-surface="app"] .layout:has(.unified-crm-host){max-width:calc(var(--workspace-width) + var(--workspace-rail));padding-left:var(--workspace-rail)}
  #crm-workspace{height:calc(100dvh - 58px);min-height:600px}
 }
+@media(max-width:799px){#crm-workspace{height:calc(100dvh - var(--workspace-header) - var(--workspace-bottom) - env(safe-area-inset-bottom));min-height:0}}
