@@ -29,7 +29,7 @@ const assert = require("node:assert/strict");
     await f.locator("[name=type]").selectOption("Количество");
     await f.locator("[name=target]").fill("30");
     await f.locator("[name=stage]").fill("Фундамент");
-    await f.locator("[name=checklist]").fill("[x] Подготовка\nПроверка");
+    await f.locator("[name=checklist]").fill("Подготовка\nПроверка");
     await f.locator("[name=comment]").fill("Привезли материал");
     await f.locator("#task-form .primary").click();
     await f.locator("dialog").waitFor({ state: "hidden" });

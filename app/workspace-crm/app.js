@@ -1712,12 +1712,21 @@ function extendPanel(route, id, body) {
       (t.target || 1) +
       '"></label><label>Единица<input name="unit" value="' +
       esc(t.unit || "м²") +
-      '" maxlength="12"></label></div><label>Чек-лист · один пункт на строку<textarea name="checklist" maxlength="1500">' +
-      esc(
-        (t.checklist || [])
-          .map((c) => (c.done ? "[x] " : "") + c.text)
-          .join("\n"),
-      ) +
+      '" maxlength="12"></label></div><div class="checklist-items">' +
+      (t.checklist || [])
+        .map(
+          (c) =>
+            '<label><input type="checkbox" name="completedItem" value="' +
+            esc(c.text) +
+            '" ' +
+            (c.done ? "checked" : "") +
+            ">" +
+            esc(c.text) +
+            "</label>",
+        )
+        .join("") +
+      '</div><label>Пункты чек-листа · один на строку<textarea name="checklist" maxlength="1500">' +
+      esc((t.checklist || []).map((c) => c.text).join("\n")) +
       "</textarea></label>" +
       inputFile("Фотоотчёт", "upload", "image/jpeg,image/png,image/webp") +
       (t.upload
@@ -2031,7 +2040,9 @@ async function extraSubmit(form, data) {
           .map((x) => x.trim())
           .filter(Boolean)
           .map((x) => ({
-            done: x.startsWith("[x] "),
+            done: [
+              ...form.querySelectorAll('[name="completedItem"]:checked'),
+            ].some((c) => c.value === x.replace(/^\[x\] /, "")),
             text: x.replace(/^\[x\] /, ""),
           })),
       };

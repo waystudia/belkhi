@@ -349,3 +349,22 @@ input[type="file"] {
   cursor: pointer;
   min-height: 44px;
 }
+.checklist-items {
+  display: grid;
+  gap: 0;
+}
+.checklist-items label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 400;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+}
+.checklist-items input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: var(--green);
+}
