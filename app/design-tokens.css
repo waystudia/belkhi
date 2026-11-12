@@ -49,3 +49,13 @@ body[data-surface="app"] :is(label, .fieldlabel) {
     font-size: 16px;
   }
 }
+
+/* Softer profile typography and pill controls requested across public screens. */
+body[data-surface="app"] .brand { font-weight: 600; letter-spacing: -.8px; }
+body[data-surface="app"] .work-profile .profile-metrics b { font-weight: 500; }
+body[data-surface="app"] .work-profile .profile-metrics small { font-weight: 400; }
+body[data-surface="app"] .market-search-field { border-radius: 999px; padding-inline: 14px; }
+body[data-surface="app"] #tender :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), select),
+body[data-surface="app"] #tender .attach,
+body[data-surface="app"] #tender > button.primary { border-radius: 999px; }
+body[data-surface="app"] #tender .place-field .worker-search { border-radius: 999px; }
