@@ -59,3 +59,6 @@ body[data-surface="app"] #tender :is(input:not([type="file"]):not([type="checkbo
 body[data-surface="app"] #tender .attach,
 body[data-surface="app"] #tender > button.primary { border-radius: 999px; }
 body[data-surface="app"] #tender .place-field .worker-search { border-radius: 999px; }
+body[data-surface="app"] .work-profile :is(#new-work, #share-profile) {
+  border-radius: 999px;
+}
