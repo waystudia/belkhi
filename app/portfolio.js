@@ -4,6 +4,10 @@ import {packFile, unpackFile} from './file-storage.js';
 import {replaceWorkspaceParams} from './workspace-nav.js';
 
 let opening;
+export function demoRoleSwitch(role='worker'){
+  return '<section class="demo-role-switch" aria-label="Режим демонстрации"><div class="demo-role-caption"><span>Тестовый режим</span><small>Можно переключать роли</small></div><div class="demo-role-options" role="group" aria-label="Выберите роль">'+
+    [['customer','Заказчик'],['worker','Специалист']].map(([value,label])=>'<button type="button" data-demo-role="'+value+'" aria-pressed="'+(role===value)+'">'+label+'</button>').join('')+'</div></section>';
+}
 function openPortfolio(){
   return new Promise((resolve,reject)=>{
     const request=indexedDB.open(accountKey('belkhi-portfolio'),1);
@@ -121,7 +125,7 @@ export async function portfolio(p,owner,editing,{show,esc,link,objectURL,notice,
   }
   const account=editing?'<a class="profile-account" data-view-key="profile-account" href="#'+(signedIn?'account':'login')+'">'+
     (signedIn?'Настройки аккаунта':'Войти или создать аккаунт')+'</a>':'';
-  show(null,'@'+handle,'<div class="work-profile">'+settings+header+bio+
+  show(null,'@'+handle,'<div class="work-profile">'+settings+(editing&&showSamples&&!signedIn?demoRoleSwitch(owner==='customer'?'customer':'worker'):'')+header+bio+
     (owner==='customer'?'':actions+shortcuts+account+extra+sections)+'</div>',editing?'':back);
   const description=document.querySelector('#profile-description');
   if(description){

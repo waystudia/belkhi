@@ -1,0 +1,123 @@
+/* Tender creation extends the app's compact green and white visual system. */
+.tender-wizard { color: var(--ink); min-width: 0; }
+.tender-wizard *, .tender-parameters * { min-width: 0; }
+.tender-wizard .tw-form { display: block; margin: 0; }
+.tender-wizard .tw-steps, .tender-wizard .tw-overview { display: none; }
+.tender-wizard .tw-content { padding-block: 18px 4px; }
+.tender-wizard h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.25; letter-spacing: -.025em; font-weight: 600; }
+.tender-wizard .tw-help { margin: 0 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.tender-wizard .tw-field { display: grid; gap: 6px; margin: 0 0 16px; font-size: 13px; font-weight: 500; }
+.tender-wizard .tw-field > span:first-child { line-height: 1.35; }
+.tender-wizard .tw-required { color: var(--green); }
+.tender-wizard .tw-input-wrap { display: flex; align-items: center; position: relative; }
+body[data-surface="app"] .tender-wizard .tw-field input:not([type="radio"]), body[data-surface="app"] .tender-wizard .worker-search { border-radius: 999px; min-height: 44px; padding: 10px 15px; font-weight: 400; background: white; }
+.tender-wizard .tw-input-wrap:has(.tw-unit) input { padding-right: 56px !important; }
+.tender-wizard .tw-unit { position: absolute; right: 15px; color: var(--muted); font-size: 12px; pointer-events: none; }
+body[data-surface="app"] .tender-wizard textarea { border-radius: 14px; min-height: 100px; padding: 12px 14px; font-weight: 400; }
+.tender-wizard input::placeholder, .tender-wizard textarea::placeholder { color: #65726a; opacity: 1; }
+.tender-wizard input, .tender-wizard textarea { caret-color: var(--green); }
+.tender-wizard .tw-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.tender-wizard .tw-choice { position: relative; }
+.tender-wizard .tw-choice summary { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 15px; min-height: 44px; border: 1px solid #bfcfc5; border-radius: 24px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 400; }
+.tender-wizard .tw-choice summary::-webkit-details-marker, .tender-wizard .tw-extra summary::-webkit-details-marker { display: none; }
+.tender-wizard summary svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tender-wizard details[open] > summary svg { transform: rotate(180deg); }
+.tender-wizard .tw-choice[open] > summary { border-color: var(--green); background: var(--mint); }
+.tender-wizard .tw-options { border: 1px solid var(--line); border-radius: 14px; background: white; padding: 4px; margin-top: 6px; max-height: 300px; overflow-y: auto; scrollbar-color: #b5c8ba white; }
+.tender-wizard .tw-options label { display: flex; align-items: center; gap: 10px; margin: 0; min-height: 44px; padding: 9px 10px; border-radius: 10px; font-size: 13px; cursor: pointer; font-weight: 400; }
+.tender-wizard .tw-options label:has(:checked) { background: var(--mint); color: #006c32; }
+.tender-wizard .tw-options input { width: 16px; height: 16px; flex: none; margin: 0; accent-color: var(--green); }
+.tender-wizard .tw-chosen { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 20px; font-size: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tender-wizard .tw-text-button { color: var(--green); border: 0; padding: 4px 0; min-height: 32px; font-size: 12px; background: transparent; gap: 4px; }
+.tender-wizard .tw-text-button svg { width: 15px; height: 15px; }
+.tender-wizard .tw-chosen .tw-text-button { margin-left: auto; }
+.tender-wizard .tw-extra { margin: 4px 0 16px; border: 1px solid var(--line); border-radius: 14px; }
+.tender-wizard .tw-extra > summary { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 14px 16px; list-style: none; background: var(--mint); border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.tender-wizard .tw-extra[open] > summary { border-radius: 14px 14px 0 0; }
+.tender-wizard .tw-extra > .tw-grid { padding: 16px 12px 0; }
+.tender-wizard .tw-note { margin-top: 8px; }
+.tender-wizard .tw-mobile-progress { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.tender-wizard .tw-progress { appearance: none; display: block; border: 0; width: 100%; height: 3px; margin-top: 10px; border-radius: 3px; overflow: hidden; background: var(--line); }
+.tender-wizard .tw-progress::-webkit-progress-bar { background: var(--line); }
+.tender-wizard .tw-progress::-webkit-progress-value { background: var(--green); }
+.tender-wizard .tw-progress::-moz-progress-bar { background: var(--green); }
+.tender-wizard .tw-footer { display: flex; justify-content: space-between; gap: 12px; align-items: center; position: sticky; bottom: calc(61px + env(safe-area-inset-bottom)); background: white; padding-block: 12px; border-top: 1px solid var(--line); z-index: 1; margin-top: 16px; }
+body[data-surface="app"] .tender-wizard .tw-footer button { min-height: 44px; border-radius: 999px; padding: 10px 22px; font-size: 13px; }
+.tender-wizard .tw-footer > span { font-size: 11px; color: var(--muted); text-align: center; }
+.tender-wizard .tw-footer .primary { margin-left: auto; min-width: 112px; }
+.tender-wizard .tw-error { margin: 0; color: #a33822; font-size: 13px; }
+.tender-wizard .tw-error:not(:empty) { margin-top: 12px; }
+.tender-wizard .tw-upload { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; border: 1px dashed #a1b9aa; border-radius: 16px; min-height: 144px; text-align: center; padding: 20px 16px; margin: 0 0 16px; position: relative; color: var(--green); cursor: pointer; }
+.tender-wizard .tw-upload strong { font-size: 14px; font-weight: 500; }
+.tender-wizard .tw-upload > span { font-size: 11px; font-weight: 400; color: var(--muted); }
+.tender-wizard .tw-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.tender-wizard .tw-upload:focus-within { outline: 2px solid var(--green); outline-offset: 3px; }
+.tender-wizard .tw-empty { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+.tender-wizard .tw-files { display: grid; gap: 8px; margin-bottom: 16px; }
+.tender-wizard .tw-file { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); padding: 8px 0; }
+.tender-wizard .tw-file > img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; flex: none; }
+.tender-wizard .tw-file > span { font-size: 12px; overflow-wrap: anywhere; flex: 1; }
+.tender-wizard .tw-file small { display: block; margin-top: 3px; font-size: 11px; }
+.tender-wizard .tw-file button { width: 36px; height: 36px; border: 0; border-radius: 999px; background: var(--field); flex: none; padding: 0; }
+.tender-wizard .tw-file-warning { background: #fff5df; color: #765111; border-radius: 10px; padding: 10px; font-size: 12px; }
+.tender-wizard .tw-review-section { border-top: 1px solid var(--line); padding: 12px 0 16px; }
+.tender-wizard .tw-section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.tender-wizard .tw-section-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.tender-wizard .tw-review-section h4 { margin: 0 0 4px; font-size: 16px; font-weight: 500; }
+.tender-wizard .tw-muted { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+.tender-wizard .tw-review-copy { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; margin: 0; }
+.tender-wizard .tw-review-facts, .tender-parameters dl { margin: 0; }
+.tender-wizard .tw-review-facts > div, .tender-parameters dl > div { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 12px; }
+.tender-wizard .tw-review-facts dt, .tender-parameters dt { color: var(--muted); flex: 1; }
+.tender-wizard .tw-review-facts dd, .tender-parameters dd { margin: 0; max-width: 60%; text-align: right; overflow-wrap: anywhere; }
+.tender-parameters { margin-block: 16px; }
+.tender-parameters h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+.tender-wizard .tw-review-section .tender-parameters { margin: 0; }
+.tender-wizard .tw-review-section .tender-parameters h3 { display: none; }
+.tender-wizard .worker-picker { margin-bottom: 16px; }
+.tender-wizard .worker-picker > label { font-size: 13px; margin: 0 0 6px; font-weight: 500; }
+body[data-surface="app"] .tender-wizard .worker-search { padding: 0 12px; }
+body[data-surface="app"] .tender-wizard .worker-search input { border: 0; background: transparent; padding-inline: 5px; }
+.tender-wizard .worker-picker-note { margin-bottom: 0; }
+.tender-wizard ::selection { background: #c9ead3; color: #103d24; }
+@media (max-width: 390px) {
+  .tender-wizard .tw-grid { gap: 0 8px; }
+  .tender-wizard .tw-grid .tw-field > span:first-child { font-size: 12px; min-height: 26px; display: flex; align-items: end; }
+  .tender-wizard .tw-choice summary { padding-inline: 12px; gap: 6px; font-size: 13px; }
+  .tender-wizard .tw-footer > span { display: none; }
+  .tender-wizard .tw-footer .primary { min-width: 150px; }
+  .tender-wizard h2 { font-size: 18px; }
+}
+@media (min-width: 1000px) {
+  body[data-surface="app"]:has(.tender-wizard) { --workspace-width: 1160px; }
+  body[data-surface="app"]:has(.tender-wizard) .layout { max-width: var(--workspace-width); }
+  body[data-surface="app"]:has(.tender-wizard) main { padding: 24px; }
+  .tender-wizard { display: grid; grid-template-columns: 160px minmax(0, 1fr) 210px; gap: 24px; align-items: start; padding-top: 12px; }
+  .tender-wizard .tw-steps { display: grid; gap: 6px; position: sticky; top: 86px; }
+  .tender-wizard .tw-steps button { border: 0; justify-content: flex-start; gap: 9px; font-size: 12px; font-weight: 400; min-height: 42px; padding: 8px; border-radius: 999px; text-align: left; }
+  .tender-wizard .tw-steps button span { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--field); font-size: 11px; }
+  .tender-wizard .tw-steps button[aria-current] { background: var(--mint); color: #006c32; font-weight: 500; }
+  .tender-wizard .tw-steps button[aria-current] span { background: var(--green); color: white; }
+  .tender-wizard .tw-overview { display: block; padding-left: 20px; border-left: 1px solid var(--line); position: sticky; top: 86px; font-size: 12px; }
+  .tender-wizard .tw-overview h3 { font-size: 15px; margin: 0 0 16px; font-weight: 500; }
+  .tender-wizard .tw-overview > strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+  .tender-wizard .tw-overview > p { color: var(--muted); margin: 6px 0 16px; }
+  .tender-wizard .tw-overview dl { margin: 0 0 16px; }
+  .tender-wizard .tw-overview dl > div { padding: 8px 0; border-top: 1px solid var(--line); }
+  .tender-wizard .tw-overview dt { color: var(--muted); font-size: 11px; }
+  .tender-wizard .tw-overview dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+  .tender-wizard .tw-overview small { font-size: 11px; line-height: 1.5; display: block; }
+  .tender-wizard .tw-mobile-progress { font-size: 11px; }
+  .tender-wizard .tw-content { min-height: 430px; padding-top: 24px; }
+  .tender-wizard .tw-footer { bottom: 0; }
+  .tender-wizard .tw-form { max-width: 620px; }
+}
+
+@media (max-width: 999px) {
+  body[data-surface="app"] main:has(.tender-wizard) { padding-bottom: 100px; }
+  .tender-wizard :is(input, textarea, summary) { scroll-margin-block: 90px 150px; }
+}
+@media (max-width: 999px) {
+  .tender-wizard .tw-footer { position: fixed; bottom: calc(61px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 552px; margin: 0; z-index: 2; }
+  .tender-wizard .tw-grid .tw-input-wrap input { padding-left: 12px; }
+}

@@ -1,0 +1,136 @@
+/* Tender summaries share the app's compact typography and pill actions. */
+body[data-surface="app"] .feed-caption {
+  padding-top: 12px;
+  padding-bottom: 16px;
+}
+body[data-surface="app"] .feed-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+body[data-surface="app"] .feed-summary-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body[data-surface="app"] .feed-summary-head .bookmark {
+  flex: none;
+  margin: -7px -7px 0 0;
+}
+body[data-surface="app"] .feed-caption .feed-budget {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 8px 0;
+}
+body[data-surface="app"] .feed-budget strong {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+body[data-surface="app"] .feed-budget span {
+  color: var(--muted);
+  font-size: 12px;
+}
+body[data-surface="app"] .feed-quick-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+body[data-surface="app"] .feed-quick-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+body[data-surface="app"] .feed-quick-facts .ui-icon {
+  width: 15px;
+  height: 15px;
+}
+body[data-surface="app"] .feed-caption .feed-summary-description {
+  margin: 10px 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+}
+body[data-surface="app"] .feed-tender-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+body[data-surface="app"] .feed-tender-actions .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+  min-height: 42px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+body[data-surface="app"] .feed-tender-actions .btn:only-child {
+  grid-column: 1 / -1;
+}
+body[data-surface="app"] .feed-tender-actions .ui-icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+body[data-surface="app"] .demo-role-switch {
+  margin: 0 0 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+body[data-surface="app"] .demo-role-caption {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+body[data-surface="app"] .demo-role-caption small {
+  color: var(--muted);
+  font-size: 11px;
+}
+body[data-surface="app"] .demo-role-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--field);
+}
+body[data-surface="app"] .demo-role-options button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 500;
+}
+body[data-surface="app"] .demo-role-options button[aria-pressed="true"] {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--mint);
+}
+@media (min-width: 800px) {
+  body[data-surface="app"] .feed-tender-actions {
+    grid-template-columns: repeat(2, minmax(0, 180px));
+  }
+  body[data-surface="app"] .demo-role-switch {
+    max-width: 440px;
+  }
+}

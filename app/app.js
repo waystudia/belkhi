@@ -1,6 +1,7 @@
 import {mountUnifiedCRM} from './unified-crm.js?v=20261111-crm-1';
 import {serviceAreas,servicePlaces,serviceRegion,territoryIncludes} from './service-places.js?v=20261111-2';
-import {portfolio} from './portfolio.js?v=20261109-4';
+import {portfolio,demoRoleSwitch} from './portfolio.js?v=20261119-tender-1';
+import {mountTenderWizard,tenderParameters} from './tender-wizard.js?v=20261119-1';
 import {crm,progress} from './crm.js';
 import {catalog} from './catalog.js';
 import {seed} from './demo.js';
@@ -65,7 +66,7 @@ channel.onmessage=({data})=>{
 const img = (key,alt='') => '<img src="media/'+encodeURIComponent(key)+'.jpg" alt="'+esc(alt)+'">';
 const link=(hash,text,cls='btn')=>'<a class="'+cls+'" href="#'+esc(hash)+'">'+esc(text)+'</a>';
 const tabs=(values,current)=>'<div class="tabs">'+values.map(v=>'<button data-tab="'+esc(v)+'" aria-pressed="'+(v===current)+'">'+esc(v)+'</button>').join('')+'</div>';
-let selectedFiles=[], draft={}, current, generation=0, urls=[], fileUrls=new WeakMap();
+let current, generation=0, urls=[], fileUrls=new WeakMap();
 let profileReturn='';
 function notice(msg){document.querySelector('#message').textContent=msg}
 function objectURL(file){
@@ -74,7 +75,7 @@ function objectURL(file){
   urls.push(url);fileUrls.set(file,url);return url;
 }
 const workerPages=['worker','market','works','crew','apply','sent','crm','manual','buyer'];
-const activeProfile=()=>currentAuth() && accountDestination()!=='market'?'customer':'worker';
+const activeProfile=()=>!currentAuth()&&demoMode()?(accountStorage.getItem('belkhi-demo-role')==='customer'?'customer':'worker'):currentAuth() && accountDestination()!=='market'?'customer':'worker';
 
 function bottomNav(page, params){
   const customerMode = activeProfile()==='customer';
@@ -117,7 +118,7 @@ function customerProfile(){
   const {p,savedHandle}=customerDetails();
   const name=p.name|| (savedHandle?'@'+savedHandle:'Заказчик');
   const type=p.type||'Частный заказчик';
-  show(null,'Профиль заказчика',`<section class="customer-overview">
+  show(null,'Профиль заказчика',(!currentAuth()&&demoMode()?demoRoleSwitch('customer'):'')+`<section class="customer-overview">
     <div class="customer-identity"><span class="settings-avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</span>
       <div><strong>${esc(name)}</strong>
       ${savedHandle&&name!=='@'+savedHandle?'<small>@'+esc(savedHandle)+'</small>':''}
@@ -199,34 +200,22 @@ function show(step,title,body,back=''){
   document.querySelector('#steps').innerHTML=steps.map((v,i)=>'<li class="'+(i===step?'active':'')+'"><span class="num">'+(i+1)+'</span>'+v+'</li>').join('');
   document.title=title+' · Белхи';
 }
+let disposeTenderWizard;
 function form(){
-  const options=(values,value)=>values.map(v=>'<option '+(v===value?'selected':'')+'>'+esc(v)+'</option>').join('');
-  show(0,'Создание тендера',`<form id="tender">
-    <section class="tender-attachments" aria-labelledby="attachments-title">
-      <div class="tender-attachment-head"><div><h2 id="attachments-title">Фото и чертежи</h2><p>До 5 файлов JPEG, PNG, WebP или PDF, до 10 МБ каждый.</p></div>
-      <input class="hiddenfile" id="upload" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
-      <label class="attach" for="upload">${icon('add')} Добавить файл</label></div>
-      <div id="files"></div>
-    </section>
-    <label for="kind">Тип работ<select id="kind" name="kind">${options(kinds,draft.kind)}</select></label>
-    <label for="description">Описание проекта<textarea id="description" name="description" maxlength="3000" required placeholder="Например, нужны фундамент, коробка и кровля.">${esc(draft.description||'')}</textarea></label>
-    ${placeField('district','district','Город или район',draft.district,true)}
-    <div class="pair">
-      <label for="budget">Бюджет, ₽<input id="budget" name="budget" type="number" inputmode="numeric" min="1" max="100000000000" required placeholder="3 000 000" value="${esc(draft.budget||'')}"></label>
-      <label for="period">Срок выполнения<select id="period" name="period">${options(durations,draft.period||'3–5 месяцев')}</select></label>
-    </div>
-    <button class="primary wide">Создать тендер</button><p class="caption">Тендер сохранится на этом устройстве. Для сравнения появятся демонстрационные отклики.</p>
-  </form>`,'list');
-  bindPlacePicker(document.querySelector('#district-picker'));
-  fileList();
+  disposeTenderWizard=mountTenderWizard({show,esc,icon,placeField,bindPlacePicker,notice,objectURL,packFile,
+    storage:accountStorage,draftKey:accountKey('belkhi-tender-draft-v2'),
+    onPublish:async(values,rawFiles)=>{
+      const parentId=route().params.get('parent');
+      const parent=parentId?await records('readonly',s=>s.get(parentId)):null;
+      if(parentId&&parent?.winner!==myProfile()?.id)throw Error('Объект недоступен');
+      const files=await Promise.all(rawFiles.map(packFile));
+      const t={...values,...(parent?{parentId,parentOwner:myProfile().id,requester:{...myProfile()}}:{}),
+        budget:Number(values.budget),created:Date.now(),id:crypto.randomUUID(),files,winner:null,localDemo:!currentAuth()&&demoMode()};
+      await records('readwrite',s=>s.add(t));
+      channel.postMessage(t.id);location.hash='offers/'+t.id;
+    }
+  });
 }
-function fileList(){
-  document.querySelector('#files').innerHTML=selectedFiles.map((file,index)=>`<div class="file">
-    ${file.type.startsWith('image/')?'<img src="'+esc(objectURL(file))+'" alt="">':''}
-    <span>${esc(file.name)}</span><button type="button" data-remove="${index}" aria-label="Удалить ${esc(file.name)}">×</button>
-  </div>`).join('');
-}
-
 function customerBadge(t){
   if(!t.owner)return '';
   const record=readLocal('belkhi-customers',{})[t.owner];
@@ -243,9 +232,9 @@ function offers(t,filter){
   const photo=t.files?.find(file=>isStoredFile(file) && file.type.startsWith('image/'));
   const cover=photo?'<img src="'+objectURL(photo)+'" alt="Фото объекта">':t.id==='demo-3' && t.photo==='site' && t.description?.includes('10 × 8')?'<img src="media/foundation-plan.svg" alt="Схема ленточного основания 10 на 8 метров">':t.photo?img(t.photo,'Фото объекта'):'';
   const post=`<article class="tender-post">
-    <div class="post-heading"><strong>${esc(t.kind)}</strong><small>${esc(t.district)}</small></div>
+    <div class="post-heading"><strong>${esc(t.title||t.kind)}</strong><small>${esc([t.kind,t.district].filter(Boolean).join(" · "))}</small></div>
     ${cover}<div class="post-caption"><dl class="post-spec"><div><dt>Бюджет</dt><dd>до ${money(t.budget)}</dd></div><div><dt>Срок работ</dt><dd>${esc(t.period)}</dd></div></dl>
-    ${t.description?'<p>'+esc(t.description)+'</p>':''}</div></article>`;
+    ${t.description?'<p>'+esc(t.description)+'</p>':''}${tenderParameters(t,esc)}</div></article>`;
   const cards=list.map(p=>`<article class="entry offer-row">${avatar(p)}<div><strong>${esc(p.name)}</strong>
     <small>${p.demo?'<b class="score">★ '+esc(p.rating)+'</b> · ':''}${esc(workerType(p.type))}${p.demo?' · Демо':''}</small>
     <div class="offer-foot"><div><b>${money(p.price)}</b><small>${esc(p.period)}</small></div>
@@ -496,14 +485,19 @@ function feedPost(t,p,saved){
   const media=files.map((file,index)=>`<a class="feed-slide" href="${esc(target)}" data-view-key="${esc(t.id+'/'+index)}" aria-label="${esc(t.kind+' · '+file.name)}">
     ${file.image?'<img loading="lazy" src="'+esc(file.url)+'" alt="'+esc(file.name)+'">':'<strong>Документ заказчика</strong>'}
     ${files.length>1?'<span class="media-position">'+(index+1)+' / '+files.length+'</span>':''}</a>`).join('');
+  const responseTarget='#apply/'+encodeURIComponent(t.id)+'?respond=1';
+  const responseAction=own
+    ? `<a class="btn primary" href="${esc(target)}">Мой отклик</a>`
+    : t.winner==null?`<a class="btn primary" href="${esc(responseTarget)}">Откликнуться</a>`:'';
   return `<article class="feed-post">
-    <div class="post-heading"><span class="feed-subject-icon">${icon('tools')}</span><div><a href="${esc(target)}"><strong>${esc(t.kind)}</strong></a><small>${esc(t.district)}${t.demo?' · Демо':''}${t.winner!=null?' · Закрыт':''}</small></div></div>
+    <div class="post-heading"><span class="feed-subject-icon">${icon('tools')}</span><div><a href="${esc(target)}"><strong>${esc(t.kind)}</strong></a><small>${esc(t.district)}${t.demo||t.localDemo?' · Демо':''}${t.winner!=null?' · Закрыт':''}</small></div></div>
     ${media?'<div class="feed-cover feed-gallery" data-gallery="'+esc(t.id)+'">'+media+'</div>':''}
     <div class="feed-caption">
-      <div class="feed-toolbar"><a href="${esc(target)}" class="feed-details-link">${own?'Мой отклик':'Открыть тендер'} ${icon('arrow')}</a>
-      <button class="workspace-icon bookmark" type="button" data-save-tender="${esc(t.id)}" aria-label="Сохранить тендер" aria-pressed="${saved}">${icon('bookmark')}</button></div>
-      <dl class="post-spec"><div><dt>Бюджет</dt><dd>${money(t.budget)}</dd></div><div><dt>Срок</dt><dd>${esc(t.period)}</dd></div><div><dt>Отклики</dt><dd>${bids(t).length}</dd></div></dl>
-      ${t.description?'<p>'+esc(t.description)+'</p>':''}
+      <div class="feed-summary-head"><h3>${esc(t.title||t.kind)}</h3><button class="workspace-icon bookmark" type="button" data-save-tender="${esc(t.id)}" aria-label="Сохранить тендер" aria-pressed="${saved}">${icon('bookmark')}</button></div>
+      <div class="feed-budget"><strong>${money(t.budget)}</strong><span>Бюджет заказчика</span></div>
+      <div class="feed-quick-facts"><span>Срок: ${esc(t.period)}</span><span>Откликов: ${bids(t).length}</span></div>
+      ${t.description?'<p class="feed-summary-description">'+esc(t.description)+'</p>':''}
+      <div class="feed-tender-actions"><a class="btn secondary" href="${esc(target)}">Открыть тендер ${icon('arrow')}</a>${responseAction}</div>
     </div></article>`;
 }
 function marketTile(t,p){
@@ -523,7 +517,7 @@ function market(tenders,p,params){
   const grid=params.get('view')==='grid';
   const filter=params.get('tab')||(p.skills.length&&!grid?'По специальности':'Все');
   const saved=savedTenders();
-  const available=tenders.filter(t=>!t.manual && (myBid(t,p) || ((t.demo||t.owner) && t.parentOwner!==p.id)));
+  const available=tenders.filter(t=>!t.manual && (myBid(t,p) || ((t.demo||t.localDemo||t.owner) && t.parentOwner!==p.id)));
   const relevant=available.filter(t=>{
     if(filter==='Мои отклики')return myBid(t,p);
     if(filter===savedTab)return saved.has(t.id);
@@ -712,7 +706,7 @@ async function workerScreen(page,id,params,seq){
   const t=await records('readonly',s=>s.get(id));if(seq!==generation)return;
   if(!t){location.replace('#market');return}
   current=t;
-  if(page==='apply'&&(t.parentOwner===p.id||(!t.demo&&!t.manual&&!t.owner&&!t.parentId))){location.replace('#offers/'+t.id);return}
+  if(page==='apply'&&(t.parentOwner===p.id||(!t.demo&&!t.localDemo&&!t.manual&&!t.owner&&!t.parentId))){location.replace('#offers/'+t.id);return}
   if(page==='buyer'){location.replace('#works');return}
   if(page==='crm'){if(t.winner!==p.id){location.replace('#works');return}crm(t,p,{esc,show,link,teamMembers,records,render,notice,channel,objectURL});
     const children=(await records('readonly',s=>s.getAll())).filter(child=>child.parentId===t.id);
@@ -723,9 +717,9 @@ async function workerScreen(page,id,params,seq){
   const cover=attachments.find(file=>file.image);
   const requestCard='<article class="apply-request">'+
     (cover?'<div class="apply-cover"><img src="'+esc(cover.url)+'" alt="'+esc(cover.name)+'"></div>':'')+
-    '<div class="apply-request-body"><div class="apply-request-head"><div><h2>'+esc(t.kind)+'</h2><span>'+esc(t.district)+'</span></div><span class="tag">'+(t.winner==null?'Приём откликов':'Закрыт')+'</span></div>'+
+    '<div class="apply-request-body"><div class="apply-request-head"><div><h2>'+esc(t.title||t.kind)+'</h2><span>'+esc([t.kind,t.district].filter(Boolean).join(' · '))+'</span></div><span class="tag">'+(t.winner==null?'Приём откликов':'Закрыт')+'</span></div>'+
     '<dl class="apply-facts"><div><dt>Бюджет заказчика</dt><dd>'+money(t.budget)+'</dd></div><div><dt>Желаемый срок</dt><dd>'+esc(t.period)+'</dd></div><div><dt>Откликов</dt><dd>'+bids(t).length+'</dd></div></dl>'+
-    '<p class="apply-description">'+esc(t.description||'Описание работ не указано.')+'</p></div></article>';
+    '<p class="apply-description">'+esc(t.description||'Описание работ не указано.')+'</p>'+tenderParameters(t,esc)+'</div></article>';
   const intro=requestCard;
   if(own){
     const status=t.winner==null?'Отклик отправлен':String(t.winner)===own.id?'Заказчик выбрал вас':'Выбран другой исполнитель';
@@ -750,6 +744,7 @@ async function workerScreen(page,id,params,seq){
     '<label for="bid-period">Срок выполнения<input id="bid-period" name="period" list="period-options" required maxlength="80" placeholder="Например, 3 недели"><datalist id="period-options"><option value="До 2 недель"><option value="3 недели"><option value="1 месяц"><option value="1–2 месяца"></datalist></label></div>'+
     '<label for="bid-comment">Комментарий заказчику <small>по желанию</small><textarea id="bid-comment" name="terms" maxlength="1500" placeholder="Укажите, что входит в стоимость, когда готовы начать и какую гарантию даёте"></textarea></label>'+
     '<div class="bid-submit"><span>Контакты откроются после выбора исполнителя.</span><button class="primary" type="submit">Отправить отклик</button></div></form></section>','market');
+  if(params.has('respond')){document.querySelector('#bid-price')?.focus();document.querySelector('#bid-form')?.scrollIntoView({block:'start'});}
 }
 document.addEventListener('submit',async event=>{
   const form=event.target;
@@ -800,6 +795,7 @@ function route(){
 let seeded;
 const accountUI={show,notice,esc,link,workerEnabled,activeProfile,render};
 async function render(){
+  disposeTenderWizard?.();disposeTenderWizard=null;
   const seq=++generation;const {page,id,index,params}=route();
   dialog.close();notice('');urls.forEach(URL.revokeObjectURL);urls=[];fileUrls=new WeakMap();current=null;
   const auth=currentAuth();
@@ -844,7 +840,7 @@ async function render(){
     if(seq!==generation)return;
     if(workerPages.includes(page)){await workerScreen(page,id,params,seq);return}
     if(page==='customer'){
-      if(!auth){location.replace('#worker'+(params.has('edit')?'?edit=1':''));return}
+      if(!auth&&!demoMode()){location.replace('#worker'+(params.has('edit')?'?edit=1':''));return}
       if(params.has('edit'))editCustomerProfile();
       else customerProfile();
       return;
@@ -882,35 +878,9 @@ async function render(){
     else offers(t,tab||'Все');
   }catch(e){notice(e.message)}
 }
-document.addEventListener('input',e=>{if(e.target.form?.id==='tender')draft=Object.fromEntries(new FormData(e.target.form))});
-document.addEventListener('change',e=>{
-  if(e.target.id!=='upload')return;
-  const next=Array.from(e.target.files);e.target.value='';
-  if(selectedFiles.length+next.length>5||next.some(f=>f.size>10*1024*1024||!['image/jpeg','image/png','image/webp','application/pdf'].includes(f.type))){notice('Проверьте тип, размер и количество файлов.');return}
-  notice('');selectedFiles.push(...next);fileList();
-});
-document.addEventListener('submit',async e=>{
-  if(e.target.id!=='tender')return;e.preventDefault();
-  const form=e.target;const values=Object.fromEntries(new FormData(form));
-  for(const key of ['description','district']){values[key]=values[key].trim();if(!values[key]){form.elements[key].focus();notice('Заполните поле «'+(key==='district'?'Город или район':'Описание проекта')+'».');return}}
-  const btn=form.querySelector('button.primary');btn.disabled=true;
-  const parentId=route().params.get('parent');
-  const parent=parentId?await records('readonly',s=>s.get(parentId)):null;
-  if(parentId&&parent?.winner!==myProfile()?.id){notice('Объект недоступен');btn.disabled=false;return}
-  try {
-    const files=await Promise.all(selectedFiles.map(packFile));
-    const t={...values,...(parent?{parentId,parentOwner:myProfile().id,requester:{...myProfile()}}:{}),
-      budget:Number(values.budget),created:Date.now(),id:crypto.randomUUID(),files,winner:null};
-    await records('readwrite',s=>s.add(t));
-    draft={};selectedFiles=[];channel.postMessage(t.id);location.hash='offers/'+t.id;
-  } catch(error) {
-    notice(error.message);
-    btn.disabled=false;
-  }
-});
 document.addEventListener('click',async e=>{
   const a=e.target.closest('a,button');if(!a)return;
-  if(a.dataset.remove!==undefined){selectedFiles.splice(Number(a.dataset.remove),1);fileList();return}
+  if(a.dataset.demoRole&&!currentAuth()&&demoMode()){accountStorage.setItem('belkhi-demo-role',a.dataset.demoRole==='customer'?'customer':'worker');location.hash=activeProfile();return;}
   if(a.dataset.tab){
     const r=route();r.params.set('tab',a.dataset.tab);
     replaceWorkspaceParams(r.params,r.page==='market');
