@@ -12,6 +12,8 @@ const number = (key, label, unit, extra = false) => ({key, label, unit, extra, t
 const choice = (key, label, options, extra = false) => ({key, label, options, extra});
 const text = (key, label, extra = false) => ({key, label, extra});
 const unknown = 'Не знаю / нужен замер';
+// Illustrative placeholders only: never copied into the draft or published values.
+const examples = {length:'42',width:'40',depth:'80',aboveGround:'40',rebar:'12',slabLength:'10',slabWidth:'8',slabThickness:'25',pileCount:'20',pileDiameter:'300',pileLength:'3',roofArea:'150',roofHeight:'6',roofSlope:'30',objectArea:'80',sockets:'24',switches:'8',lights:'12',circuits:'6',surfaceArea:'120',wallHeight:'2.8',layer:'10',houseArea:'120',floors:'2',houseLength:'10',houseWidth:'12'};
 function fields(kind, subtype) {
   const shared = [choice('measurement', 'Нужен выезд и замер', ['Нужен', 'Замеры уже есть', 'Обсудим'], true), choice('materials', 'Кто закупает материалы', ['Заказчик', 'Исполнитель', 'Обсудим'], true), choice('project', 'Проект или схема', ['Есть', 'Нет', 'Нужна помощь'], true), text('access', 'Условия на объекте', true)];
   let result = [];
@@ -55,6 +57,8 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
   let active = true;
   let busy = false;
   let saveError = false;
+  let closeMenus = () => {};
+  let detachMenus = () => {};
   const currentFields = () => fields(data.kind, data.subtype);
   const countKeys = new Set(['pileCount', 'sockets', 'switches', 'lights', 'circuits', 'floors']);
   const params = () => state.parameters[data.kind] ||= {};
@@ -63,7 +67,7 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
     catch { if (!saveError) notice('Не удалось сохранить черновик на устройстве. Не закрывайте страницу до создания тендера.'); saveError = true; }
   }
   function choiceField(name, label, options, value, required = false) {
-    return `<div class="tw-field tw-choice-field"><span id="tw-label-${esc(name)}">${esc(label)}${required ? ' <span class="tw-required">*</span>' : ''}</span><details class="tw-choice" data-choice="${esc(name)}"><summary aria-label="${esc(label)}: ${esc(value || 'выберите вариант')}"><span id="tw-value-${esc(name)}">${esc(value || 'Выберите вариант')}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary><div class="tw-options" role="group" aria-label="${esc(label)}">${options.map(option => `<label><input type="radio" name="${esc(name)}" value="${esc(option)}" ${option === value ? 'checked' : ''}><span>${esc(option)}</span></label>`).join('')}<label><input type="radio" name="${esc(name)}" value="" ${!value ? 'checked' : ''}><span>${required ? 'Выбрать позже' : 'Не указано'}</span></label></div></details></div>`;
+    return `<div class="tw-field tw-choice-field"><span id="tw-label-${esc(name)}">${esc(label)}${required ? ' <span class="tw-required">*</span>' : ''}</span><details class="tw-choice" data-choice="${esc(name)}"><summary aria-label="${esc(label)}: ${esc(value || 'выберите вариант')}"><span id="tw-value-${esc(name)}">${esc(value || 'Выбрать')}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary><div class="tw-options" role="group" aria-label="${esc(label)}">${options.map(option => `<label><input type="radio" name="${esc(name)}" value="${esc(option)}" ${option === value ? 'checked' : ''}><span>${esc(option)}</span></label>`).join('')}${required ? '' : `<label><input type="radio" name="${esc(name)}" value="" ${!value ? 'checked' : ''}><span>Не указано</span></label>`}</div></details></div>`;
   }
   function input(name, label, {value = '', unit = '', type = 'text', required = false, maxLength = 100, placeholder = ''} = {}) {
     return `<label class="tw-field" for="tw-${esc(name)}"><span>${esc(label)}${required ? ' <span class="tw-required">*</span>' : ''}</span><span class="tw-input-wrap"><input id="tw-${esc(name)}" name="${esc(name)}" value="${esc(value)}" type="${type}" ${type === 'number' ? `min="${countKeys.has(name.replace('param:', '')) ? '0' : '0.01'}" max="100000000000" step="${countKeys.has(name.replace('param:', '')) ? '1' : 'any'}" inputmode="decimal"` : `maxlength="${maxLength}"`} ${required ? 'required' : ''} placeholder="${esc(placeholder)}">${unit ? `<span class="tw-unit">${esc(unit)}</span>` : ''}</span></label>`;
@@ -71,7 +75,7 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
   function parameter(field) {
     const value = params()[field.key] ?? '';
     if (field.options) return choiceField('param:' + field.key, field.label, field.options, value);
-    return input('param:' + field.key, field.label, {value, unit: field.unit, type: field.type || 'text', placeholder: field.key === 'concrete' ? 'М300' : field.key === 'access' ? 'Вода, электричество, подъезд' : field.type === 'number' ? '—' : 'Не указано'});
+    return input('param:' + field.key, field.label, {value, unit: field.unit, type: field.type || 'text', placeholder: field.key === 'concrete' ? 'М300' : field.key === 'access' ? 'Вода, электричество, подъезд' : field.type === 'number' ? examples[field.key] || '10' : 'Не указано'});
   }
   function fileURL(file) {
     if (!state.urls.has(file)) state.urls.set(file, URL.createObjectURL(file));
@@ -87,9 +91,9 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
     if (state.step === 0) return `<h2 id="tw-step-title">Какая работа нужна?</h2><p class="tw-help">Выберите специальность — покажем подходящие вопросы.</p>${input('title', 'Название тендера', {value: data.title, required: true, maxLength: 100, placeholder: 'Например, залить фундамент дома'})}${choiceField('kind', 'Специальность', kinds, data.kind, true)}${data.kind ? choiceField('subtype', 'Вид работ', subtypes[data.kind], data.subtype, true) : ''}<label class="tw-field" for="tw-description"><span>Что нужно сделать <span class="tw-required">*</span></span><textarea id="tw-description" name="description" maxlength="3000" required placeholder="Опишите задачу, пожелания и что уже готово">${esc(data.description || '')}</textarea></label>`;
     if (state.step === 1) {
       const title = {'Фундамент':'Параметры фундамента', 'Кровля':'Параметры кровли', 'Электромонтаж':'Параметры электромонтажа', 'Отделочные работы':'Параметры отделки', 'Строительство дома':'Параметры строительства'}[data.kind];
-      return `<h2 id="tw-step-title">${title || 'Параметры работ'}</h2><p class="tw-help">Если не знаете — пропустите. Мастер уточнит размеры и материалы.</p><p class="tw-chosen">${esc(data.kind)} · ${esc(data.subtype || '')}<button class="tw-text-button" type="button" data-tw-step="0">Изменить</button></p><div class="tw-grid">${currentFields().filter(field => !field.extra).map(parameter).join('')}</div><details class="tw-extra"><summary>Дополнительные сведения<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary><div class="tw-grid">${currentFields().filter(field => field.extra).map(parameter).join('')}</div></details><p class="tw-help tw-note">Указывайте известные вам данные из проекта или замеров.</p>`;
+      return `<h2 id="tw-step-title">${title || 'Параметры работ'}</h2><p class="tw-help">Серые значения — пример. Если не знаете размер, пропустите поле.</p><p class="tw-chosen">${esc(data.kind)} · ${esc(data.subtype || '')}<button class="tw-text-button" type="button" data-tw-step="0">Изменить</button></p><div class="tw-grid">${currentFields().filter(field => !field.extra).map(parameter).join('')}</div><details class="tw-extra"><summary>Дополнительные сведения<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary><div class="tw-grid">${currentFields().filter(field => field.extra).map(parameter).join('')}</div></details><p class="tw-help tw-note">Указывайте известные вам данные из проекта или замеров.</p>`;
     }
-    if (state.step === 2) return `<h2 id="tw-step-title">Место, бюджет и сроки</h2><p class="tw-help">Мастеру важно понимать, куда ехать и когда начинать.</p>${placeField('tw-district', 'district', 'Город, село или район', data.district || '', true)}${input('locationNote', 'Ориентир или район города', {value: data.locationNote, placeholder: 'Без номера дома и квартиры'})}<p class="tw-help">Точный адрес можно передать выбранному исполнителю.</p><div class="tw-grid">${input('budget', 'Бюджет', {value: data.budget, type: 'number', unit: '₽', required: true, placeholder: '400 000'})}${choiceField('period', 'Срок выполнения', periods, data.period || '', true)}</div>${choiceField('start', 'Когда начинать', ['Как можно скорее', 'В течение месяца', 'В выбранную дату', 'По договорённости'], data.start || '')}${data.start === 'В выбранную дату' ? input('startDate', 'Дата начала', {value: data.startDate, type: 'date', required: true}) : ''}`;
+    if (state.step === 2) return `<h2 id="tw-step-title">Место, бюджет и сроки</h2><p class="tw-help">Укажите место и удобные сроки работ.</p>${placeField('tw-district', 'district', 'Город, село или район', data.district || '', true)}${input('locationNote', 'Ориентир или район города', {value: data.locationNote, placeholder: 'Без номера дома и квартиры'})}<p class="tw-help">Точный адрес можно передать выбранному исполнителю.</p><div class="tw-grid">${input('budget', 'Бюджет', {value: data.budget, type: 'number', unit: '₽', required: true, placeholder: '400 000'})}${choiceField('period', 'Срок выполнения', periods, data.period || '', true)}</div>${choiceField('start', 'Когда начинать', ['Как можно скорее', 'В течение месяца', 'В выбранную дату', 'По договорённости'], data.start || '')}${data.start === 'В выбранную дату' ? input('startDate', 'Дата начала', {value: data.startDate, type: 'date', required: true}) : ''}`;
     if (state.step === 3) return `<h2 id="tw-step-title">Фото и чертежи</h2><p class="tw-help">Фото объекта, план или эскиз помогут мастеру оценить объём работ.</p><label class="tw-upload" for="tw-upload">${icon('add')}<strong>Добавить фото или файл</strong><span>До 5 файлов · JPEG, PNG, WebP, PDF · до 10 МБ</span><input id="tw-upload" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple></label>${state.restoredFiles ? '<p class="tw-file-warning">После перезагрузки добавьте файлы заново. Остальные данные черновика сохранены.</p>' : ''}${filesHTML()}<p class="tw-help">Этот шаг можно пропустить.</p>`;
     const review = {...data, params: params()};
     return `<h2 id="tw-step-title">Проверьте тендер</h2><p class="tw-help">Такую информацию увидят специалисты. Любой раздел можно изменить.</p>${reviewSection('Работа', 0, `<h4>${esc(data.title)}</h4><p class="tw-muted">${esc(data.kind)} · ${esc(data.subtype)}</p><p class="tw-review-copy">${esc(data.description)}</p>`)}${reviewSection('Параметры', 1, tenderParameters(review, esc) || '<p class="tw-muted">Мастер уточнит параметры при обсуждении.</p>')}${reviewSection('Место и сроки', 2, `<dl class="tw-review-facts"><div><dt>Где</dt><dd>${esc(data.district)}${data.locationNote ? ' · ' + esc(data.locationNote) : ''}</dd></div><div><dt>Бюджет</dt><dd>${Number(data.budget).toLocaleString('ru-RU')} ₽</dd></div><div><dt>Срок</dt><dd>${esc(data.period)}</dd></div><div><dt>Начало</dt><dd>${esc(data.start === 'В выбранную дату' ? data.startDate : data.start || 'По договорённости')}</dd></div></dl>`)}${reviewSection('Фото и файлы', 3, (state.restoredFiles ? '<p class="tw-file-warning">Фото после перезагрузки не восстановлены. Добавьте их заново, если хотите приложить к тендеру.</p>' : '') + filesHTML())}<p class="tw-help tw-local-note">Демо-версия: тендер сохранится на этом устройстве. Отклики для сравнения будут демонстрационными.</p>`;
@@ -131,13 +135,70 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
   }
   function render(focus = true) {
     if (!active) return;
+    detachMenus();
     persist();
     const nav = `<nav class="tw-steps" aria-label="Шаги создания тендера">${steps.map((step, index) => `<button type="button" data-tw-step="${index}" ${index > state.step ? 'disabled' : ''} ${index === state.step ? 'aria-current="step"' : ''}><span>${index + 1}</span>${step}</button>`).join('')}</nav>`;
-    show(0, 'Создание тендера', `<div class="tender-wizard">${nav}<form id="tender-wizard-form" class="tw-form" novalidate><div class="tw-mobile-progress"><span>Шаг ${state.step + 1} из 5</span><span>${steps[state.step]}</span></div><progress class="tw-progress" value="${state.step + 1}" max="5" aria-label="Шаг ${state.step + 1} из 5"></progress><div class="tw-content">${content()}</div><p id="tw-error" class="tw-error" role="alert"></p><div class="tw-footer"><button class="tw-back" type="button" data-tw-back ${state.step === 0 ? 'disabled' : ''}>Назад</button><span>Черновик на устройстве</span><button type="submit" class="primary">${state.step === 4 ? 'Создать тендер' : 'Далее'}</button></div></form><div class="tw-overview"><h3>Ваш тендер</h3><strong>${esc(data.title || 'Название появится здесь')}</strong><p>${esc(data.kind || 'Выберите специальность')}</p><dl><div><dt>Место</dt><dd>${esc(data.district || 'Не указано')}</dd></div><div><dt>Бюджет</dt><dd>${data.budget ? Number(data.budget).toLocaleString('ru-RU') + ' ₽' : 'Не указан'}</dd></div><div><dt>Срок</dt><dd>${esc(data.period || 'Не указан')}</dd></div></dl><small>Заполните известные данные. Остальное можно уточнить с мастером.</small></div></div>`, 'market');
+    show(0, 'Создание тендера', `<div class="tender-wizard">${nav}<form id="tender-wizard-form" class="tw-form" novalidate><div class="tw-mobile-progress"><span>Шаг ${state.step + 1} из 5</span><span>${steps[state.step]}</span></div><div class="tw-mobile-track" aria-hidden="true">${steps.map((_,index)=>`<span class="${index < state.step ? 'done' : index === state.step ? 'current' : ''}">${index < state.step ? '<svg viewBox="0 0 20 20"><path d="m5 10 3 3 7-7"/></svg>' : index+1}</span>`).join('')}</div><progress class="tw-progress" value="${state.step + 1}" max="5" aria-label="Шаг ${state.step + 1} из 5"></progress><div class="tw-content">${content()}</div><p id="tw-error" class="tw-error" role="alert"></p><div class="tw-footer"><button class="tw-back" type="button" data-tw-back ${state.step === 0 ? 'disabled' : ''}>Назад</button><span>Черновик на устройстве</span><button type="submit" class="primary">${state.step === 4 ? 'Создать тендер' : 'Далее'}</button></div></form><div class="tw-overview"><h3>Ваш тендер</h3><strong>${esc(data.title || 'Название появится здесь')}</strong><p>${esc(data.kind || 'Выберите специальность')}</p><dl><div><dt>Место</dt><dd>${esc(data.district || 'Не указано')}</dd></div><div><dt>Бюджет</dt><dd>${data.budget ? Number(data.budget).toLocaleString('ru-RU') + ' ₽' : 'Не указан'}</dd></div><div><dt>Срок</dt><dd>${esc(data.period || 'Не указан')}</dd></div></dl><small>Заполните известные данные. Остальное можно уточнить с мастером.</small></div></div>`, 'market');
     const form = document.querySelector('#tender-wizard-form');
     const root = form.closest('.tender-wizard');
+    function positionMenu(anchor, menu) {
+      const rect = anchor.getBoundingClientRect();
+      const boundary = innerWidth < 1000 ? innerHeight - 126 : innerHeight - 12;
+      const width = Math.min(Math.max(rect.width, 264), innerWidth - 24);
+      const below = boundary - rect.bottom - 6;
+      const above = rect.top - 70;
+      const up = below < 150 && above > below;
+      const height = Math.max(100, Math.min(menu.matches('.worker-suggestions') ? 160 : 260, up ? above : below));
+      menu.style.width = width + 'px';
+      menu.style.left = Math.max(12, Math.min(rect.left, innerWidth - width - 12)) + 'px';
+      menu.style.maxHeight = height + 'px';
+      menu.style.top = up ? 'auto' : Math.max(64, rect.bottom + 6) + 'px';
+      menu.style.bottom = up ? (innerHeight - rect.top + 6) + 'px' : 'auto';
+    }
+    const positionChoice = choice => positionMenu(choice.querySelector('summary'), choice.querySelector('.tw-options'));
+    root.addEventListener('toggle', event => {
+      const choice = event.target;
+      if (!choice.matches('.tw-choice') || !choice.open) return;
+      root.querySelectorAll('.tw-choice[open]').forEach(other => { if (other !== choice) other.open = false; });
+      positionChoice(choice);
+    }, true);
+    root.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      const choice = root.querySelector('.tw-choice[open]');
+      if (choice) {event.preventDefault(); choice.open = false; choice.querySelector('summary').focus();}
+    });
     const picker = root.querySelector('#tw-district-picker');
-    if (picker) bindPlacePicker(picker);
+    if (picker) {
+      bindPlacePicker(picker);
+      const input = picker.querySelector('input');
+      input.placeholder = 'Город, село или район';
+      const positionPlaces = () => {
+        const results = picker.querySelector('.worker-suggestions');
+        if (!results.hidden) {
+          root.querySelectorAll('.tw-choice[open]').forEach(choice => {choice.open = false;});
+          positionMenu(input, results);
+        }
+      };
+      input.addEventListener('input', positionPlaces);
+      input.addEventListener('focus', positionPlaces);
+    }
+    closeMenus = event => {
+      if (picker) {
+        const results = picker.querySelector('.worker-suggestions');
+        if (!results.hidden) {
+          if (event.type === 'resize' || event.type === 'scroll') positionMenu(picker.querySelector('input'), results);
+          else if (!picker.contains(event.target)) results.hidden = true;
+        }
+      }
+      root.querySelectorAll('.tw-choice[open]').forEach(choice => {
+        if (event.type === 'resize' || event.type === 'scroll') positionChoice(choice);
+        else if (!choice.contains(event.target)) choice.open = false;
+      });
+    };
+    document.addEventListener('pointerdown', closeMenus);
+    window.addEventListener('resize', closeMenus);
+    window.addEventListener('scroll', closeMenus, true);
+    detachMenus = () => {document.removeEventListener('pointerdown', closeMenus); window.removeEventListener('resize', closeMenus); window.removeEventListener('scroll', closeMenus, true);};
     form.addEventListener('input', event => { if (event.target.type !== 'radio' && event.target.type !== 'file') collect(form); });
     form.addEventListener('change', event => {
       const element = event.target;
@@ -153,10 +214,20 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
         collect(form);
         if (element.name === 'kind' && previousKind !== data.kind) {data.subtype = ''; render(false);}
         else if (element.name === 'start') render(false);
-        else {const choice = element.closest('details'); choice.open = false; choice.querySelector('summary span').textContent = element.value || 'Выберите вариант'; choice.querySelector('summary').focus();}
+        else {const choice = element.closest('details'); choice.open = false; choice.querySelector('summary span').textContent = element.value || 'Выбрать'; choice.querySelector('summary').focus();}
       } else {collect(form); if (element.name === 'start') render(false);}
     });
     root.addEventListener('click', event => {
+      const summary = event.target.closest('.tw-choice > summary');
+      if (summary) {
+        event.preventDefault();
+        const choice = summary.parentElement;
+        const open = !choice.open;
+        root.querySelectorAll('.tw-choice[open]').forEach(other => { other.open = false; });
+        choice.open = open;
+        if (open) positionChoice(choice);
+        return;
+      }
       const button = event.target.closest('button');
       if (!button || busy) return;
       if (button.hasAttribute('data-tw-remove')) {
@@ -183,5 +254,5 @@ export function mountTenderWizard({show, esc = defaultEscape, icon, placeField, 
     if (focus) {document.querySelector('#tw-step-title')?.setAttribute('tabindex', '-1'); document.querySelector('#tw-step-title')?.focus({preventScroll: true}); document.querySelector('#screen')?.scrollIntoView({block: 'start', behavior: 'instant'});}
   }
   render(false);
-  return () => {active = false;};
+  return () => {active = false; detachMenus();};
 }
