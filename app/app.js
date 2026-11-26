@@ -1,3 +1,4 @@
+import {adminPanel,restoreAdminNavigation} from './admin-panel.js?v=20261127-admin-1';
 import {demoCustomers,demoSpecialists} from './demo-fixtures.js';
 import {publishTender,submitTenderBid,chooseTenderBid,syncTenders} from './tender-cloud.js';
 import {mountUnifiedCRM} from './unified-crm.js?v=20261111-crm-1';
@@ -834,7 +835,7 @@ async function render(){
   const isRegistration=registrationPages.includes(page);
   const isSettings=['account','activate-worker'].includes(page);
   const isAccountPage=isRegistration||['login','start'].includes(page)||isSettings;
-  document.body.dataset.surface = page==='admin' ? 'admin' : page==='catalog' ? 'catalog'
+  document.body.dataset.surface = ['admin','admin-preview'].includes(page) ? 'admin' : page==='catalog' ? 'catalog'
     : isAccountPage&&!isSettings&&!(page==='start'&&auth?.user?.user_metadata?.belkhi_starting_mode) ? 'account' : 'app';
   try{
     const pending=registrationStep();
@@ -847,17 +848,14 @@ async function render(){
       registrationScreen(page,accountUI,authError);
       return;
     }
+    if(page==='admin-preview'){await adminPanel({id,params,...accountUI,isCurrent:()=>seq===generation,preview:true});return;}
     if(page==='admin'){
-      if(!auth){accountScreen('admin',accountUI,authError);return}
+      if(!auth){accountScreen('admin',accountUI,authError);screen.insertAdjacentHTML('beforeend','<a class="btn secondary" href="#admin-preview">Посмотреть демонстрацию админки</a>');return}
       if(!isOwner()){
         show(null,'Администрирование','<p>У этого аккаунта нет прав администратора.</p>'+link('account','Настройки аккаунта','btn'));
         return;
       }
-      if(params.has('section')){
-        await catalog(true,params.get('section'),{show,notice,render,sync:()=>seed(records)});
-        return;
-      }
-      await moderation(id,params,accountUI,()=>seq===generation);
+      await adminPanel({id,params,...accountUI,isCurrent:()=>seq===generation});
       return;
     }
     if(page==='catalog'){await catalog(false,params.get('section'),{show,notice,render});return}
@@ -960,11 +958,13 @@ window.addEventListener('hashchange',async event=>{
   }
   await render();
   if(location.hash!==here)return;
+  if(document.body.dataset.surface==='admin'&&restoreAdminNavigation())return;
   if((document.body.dataset.surface==='app'||route().page==='start') && restoreWorkspace())return;
   screen.focus({preventScroll:true});window.scrollTo(0,0);
   screen.querySelector('[data-current-publication]')?.scrollIntoView({block:'start'});
 });
 await render();
+if(document.body.dataset.surface==='admin')restoreAdminNavigation();
 if(document.body.dataset.surface==='app' && !restoreWorkspace()){
   screen.querySelector('[data-current-publication]')?.scrollIntoView({block:'start'});
 }

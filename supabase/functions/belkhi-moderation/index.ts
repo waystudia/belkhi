@@ -44,20 +44,45 @@ Deno.serve(async (request) => {
     const page = Number(input?.page ?? 0);
     if (!Number.isSafeInteger(page) || page < 0 || page > 10000) throw new RequestError(400, "Неверная страница.");
     const id = input?.id;
-    if (action !== "accounts" && action !== "journal" && (typeof id !== "string" || !uuid.test(id))) {
+    if (!["accounts", "journal", "overview", "tenders"].includes(action) && (typeof id !== "string" || !uuid.test(id))) {
       throw new RequestError(400, "Неверный идентификатор аккаунта.");
     }
-    const list = (account_id: string | null, search_text = "", account_status = "", start_at = 0) =>
-      backend("/rest/v1/rpc/belkhi_moderation_accounts", "POST", { account_id, search_text, account_status, start_at });
+    const list = (account_id: string | null, search_text = "", account_status = "", start_at = 0, role_filter = "all") =>
+      backend("/rest/v1/rpc/belkhi_admin_accounts", "POST", { account_id, search_text, account_status, start_at, role_filter });
     const reason = typeof input?.reason === "string" ? input.reason.trim() : "";
     const audit = (type: string) =>
       backend("/rest/v1/belkhi_moderation_log", "POST", { actor: actor.id, target: id, reason, action: type });
     let data;
-    if (action === "accounts") {
+    if (action === "overview") {
+      data = await backend("/rest/v1/rpc/belkhi_admin_overview", "POST", {});
+    } else if (action === "tenders") {
+      const status = input.status ?? "";
+      if (!["", "open", "in_progress"].includes(status)) throw new RequestError(400, "Неверный статус тендера.");
+      const customer = input.owner_id ?? null;
+      if (customer !== null && (typeof customer !== "string" || !uuid.test(customer))) {
+        throw new RequestError(400, "Неверный идентификатор заказчика.");
+      }
+      data = await backend("/rest/v1/rpc/belkhi_admin_tenders", "POST", {
+        search_text: String(input.search ?? "").trim().slice(0, 150), tender_status: status,
+        customer_id: customer, start_at: page * 30,
+      });
+    } else if (action === "tender") {
+      data = await backend("/rest/v1/rpc/belkhi_admin_tender", "POST", { tender_id: id });
+      if (!data) throw new RequestError(404, "Тендер не найден.");
+    } else if (action === "accounts") {
       const status = ["active", "blocked"].includes(input.status) ? input.status : "";
-      data = await list(null, String(input.search ?? "").trim().slice(0, 150), status, page * 30);
+      const role = input.role ?? "all";
+      if (!["all", "customers", "specialists", "admins"].includes(role)) throw new RequestError(400, "Неверный раздел аккаунтов.");
+      data = await list(null, String(input.search ?? "").trim().slice(0, 150), status, page * 30, role);
     } else if (action === "journal") {
-      data = await backend("/rest/v1/belkhi_moderation_log?order=id.desc&limit=31&offset=" + page * 30);
+      const target = input.target ?? null;
+      if (target !== null && (typeof target !== "string" || !uuid.test(target))) throw new RequestError(400, "Неверный идентификатор аккаунта.");
+      const event = input.event ?? "";
+      if (!["", "block_requested", "unblock_requested", "read_messages"].includes(event)) throw new RequestError(400, "Неверное действие журнала.");
+      const filters = new URLSearchParams({order: "id.desc", limit: "31", offset: String(page * 30)});
+      if (target) filters.set("target", "eq." + target);
+      if (event) filters.set("action", "eq." + event);
+      data = await backend("/rest/v1/belkhi_moderation_log?" + filters);
     } else {
       if (!["account", "block", "unblock", "messages"].includes(action)) {
         throw new RequestError(400, "Неизвестное действие.");
