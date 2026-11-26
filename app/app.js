@@ -291,6 +291,7 @@ function portfolioOwner(){
   return accountStorage.getItem(key);
 }
 function myProfile(){
+  if(!currentAuth()&&demoMode()&&activeProfile()==='customer')return null;
   const fixture=!currentAuth()&&demoMode()?demoSpecialists.find(p=>p.id===accountStorage.getItem('belkhi-demo-specialist')):null;
   const p=fixture||JSON.parse(accountStorage.getItem(profileKey)||'null');
   return p && {...p,id:currentAuth()?.user.id||p.id,type:workerType(p.type),handle:currentIdentity()?.username||p.handle,teamSize:teamMembers(p).length+1};
