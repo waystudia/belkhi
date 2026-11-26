@@ -1,4 +1,5 @@
 import {projectUrl,publishableKey} from './cloud.js';
+import {tenderDetails,exampleBids} from './demo-fixtures.js';
 import {accountStorage} from './account-storage.js';
 export const examples=[
   ['Строительство дома','Истра','Одноэтажный дом из газобетона, 120 м². Фундамент, коробка и кровля.',3000000,'3–5 месяцев','house','Мария Соколова','maria'],
@@ -22,17 +23,21 @@ export async function seed(records){
       })
     }));
     online=true;
-  }catch{if(accountStorage.getItem('belkhi-demo-v1'))return}
+  }catch{}
   await records('readwrite',store=>{
     const ids=new Set(rows.map(t=>'demo-'+t.position));
     const request=store.openCursor();
     request.onsuccess=()=>{const c=request.result;if(c){if(online&&c.value.demo&&!ids.has(c.key)&&c.value.winner==null)c.delete();c.continue()}};
-    for(const row of rows){
+    for(let row of rows){
+      const detail=tenderDetails[row.position]||{};
+      row={...detail,...row,title:row.title||detail.title,params:row.params||detail.params,description:row.description===examples[row.position]?.[2]?detail.description||row.description:row.description};
+      const samples=exampleBids(row);
+      row.catalogBids=row.catalogBids?.length?row.catalogBids.map(b=>({...samples.find(p=>p.id===b.id),...b,terms:b.terms==='Работа и инструмент'?samples.find(p=>p.id===b.id)?.terms:b.terms})):samples;
       const id='demo-'+row.position, req=store.get(id);
       req.onsuccess=()=>{
         const old=req.result;
-        if(old?.winner!=null)return;
-        store.put({created:1+row.position,files:[],winner:null,...old,...row,id,demo:true});
+        if(old?.winner!=null){if(!old.ownerAccount)store.put({...old,ownerAccount:'demo-customer:'+row.owner});return;}
+        store.put({created:1+row.position,files:[],winner:null,...old,...row,id,demo:true,ownerAccount:'demo-customer:'+row.owner});
       };
     }
   });

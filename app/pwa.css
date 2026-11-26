@@ -1,0 +1,6 @@
+#install-app{font:inherit;font-size:12px;white-space:nowrap;padding:8px 12px;border:1px solid #b6cfc2;border-radius:20px;background:#fff;color:#006d3c;cursor:pointer}
+#install-help{position:fixed;z-index:50;top:72px;right:16px;width:min(340px,calc(100vw - 32px));padding:20px;background:#fff;border:1px solid #b6cfc2;border-radius:14px;color:#17392b;box-shadow:0 8px 24px #17392b1a}
+#install-help p{font-size:14px;line-height:1.6}#install-help button{font:inherit;padding:8px 16px}#install-app:focus-visible{outline:2px solid #007e47;outline-offset:3px}
+.demo-persona{display:block;margin:12px 0 20px;font-size:13px}.demo-persona select{display:block;width:100%;margin-top:6px}.demo-note{font-size:13px;color:#496052}
+@media(max-width:600px){#install-app{font-size:11px;padding:7px 9px}.head{gap:8px}.head>span{display:none}}
+[hidden]{display:none!important}

@@ -98,7 +98,8 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     await p.locator('[data-demo-role=worker]').click();
     await p.waitForURL(/#worker$/);
     await p.locator('[data-demo-role=worker][aria-pressed=true]').waitFor();
-    await p.goto(base+'#market');
+    await p.locator('#demo-persona').selectOption('worker:2');
+    await p.goto(base+'#market?tab='+encodeURIComponent('Все'));
     const publishedPost=p.locator('.feed-post').filter({has:p.getByRole('heading',{name:'Тест: Фундамент',exact:true})});
     await publishedPost.waitFor();
     await publishedPost.getByRole('link',{name:/Открыть тендер/}).click();
